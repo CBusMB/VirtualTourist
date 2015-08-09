@@ -28,7 +28,6 @@ class Location: NSManagedObject
     // Dictionary
     latitude = dictionary[Keys.Latitude] as! Double
     longitude = dictionary[Keys.Longitude] as! Double
-    println("\(latitude)")
   }
 
 

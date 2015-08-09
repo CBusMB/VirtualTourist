@@ -38,6 +38,10 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
     }
   }
   
+  var instructionView: UIView?
+  
+  var currentOrientation: UIDeviceOrientation?
+  
   /// sets regionToArchive so that the last location is saved for the next time the app is opened
   func saveLastUserLocation(notification: NSNotification) {
     regionToArchive = mapView.region
@@ -71,6 +75,58 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
   // MARK: - View management
   
   override func setEditing(editing: Bool, animated: Bool) {
+    super.setEditing(editing, animated: animated)
+    if editing {
+      handleRotationWhileEditing()
+      let rectForInstructionView = viewToAnimateRect(viewHeightForOffset: 0.0)
+      instructionView = DeleteInstructionsView(frame: rectForInstructionView)
+    } else {
+      // When not in editing mode, remove myself as an observer of UIDeviceOrientationDidChangeNotification
+      NSNotificationCenter.defaultCenter().removeObserver(self, name: UIDeviceOrientationDidChangeNotification, object: nil)
+    }
+    animateView(view: instructionView!, forEditingState: editing)
+  }
+  
+  /// Slide a view in or out to instruct the user on how to delete pins from the map
+  func animateView(view viewToAnimate: UIView, forEditingState editing: Bool) {
+    if editing {
+      view.addSubview(viewToAnimate)
+      UIView.animateWithDuration(0.55) { viewToAnimate.frame = self.viewToAnimateRect(viewHeightForOffset: viewToAnimate.frame.height) }
+    } else {
+      UIView.animateWithDuration(0.55,
+        animations: { viewToAnimate.frame = self.viewToAnimateRect(viewHeightForOffset: 0.0) },
+        completion: { (_) -> Void in viewToAnimate.removeFromSuperview() })
+    }
+  }
+  
+  /// :returns: The location and size of the animated view.
+  /// :param: viewHeightForOffset Use this value to set the y position of the viewToAnimate relative to its super view.
+  func viewToAnimateRect(viewHeightForOffset height: CGFloat) -> CGRect {
+    return CGRect(x: view.frame.origin.x,
+                  y: view.frame.height - height,
+              width: view.frame.width,
+             height: view.frame.height / 8)
+  }
+  
+  /// Set up a notification for when the orientation of the device changes
+  func handleRotationWhileEditing() {
+    let currentDevice = UIDevice.currentDevice()
+    currentDevice.beginGeneratingDeviceOrientationNotifications()
+    NSNotificationCenter.defaultCenter().addObserver(self, selector: "deviceOrientationDidChange:", name: UIDeviceOrientationDidChangeNotification, object: nil)
+  }
+  
+  /// If the device is turned to landscape or portrait oreination, remove the previous instruction view and slide in a new one
+  func deviceOrientationDidChange(notification: NSNotification) {
+    let orientation = UIDevice.currentDevice().orientation
+    if orientation == UIDeviceOrientation.FaceUp || orientation == UIDeviceOrientation.FaceDown || orientation == UIDeviceOrientation.Unknown ||
+      currentOrientation == orientation {
+        return
+    }
+    currentOrientation = orientation
+    instructionView!.removeFromSuperview()
+    let rectForInstructionView = viewToAnimateRect(viewHeightForOffset: 0.0)
+    instructionView = DeleteInstructionsView(frame: rectForInstructionView)
+    animateView(view: instructionView!, forEditingState: true)
   }
   
   // MARK: - MKMapViewDelegate and related
@@ -96,12 +152,13 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
     return pinAnnotationView
   }
   
-  func mapView(mapView: MKMapView!, annotationView view: MKAnnotationView!, calloutAccessoryControlTapped control: UIControl!) {
+  func mapView(mapView: MKMapView!, didSelectAnnotationView view: MKAnnotationView!) {
     if editing {
-      
+      editing = false
     } else {
       let storyboard = UIStoryboard(name: "Main", bundle: nil)
       let photoAlbum = storyboard.instantiateViewControllerWithIdentifier("PhotoAlbumViewController") as! PhotoAlbumViewController
+      photoAlbum.annotation = view.annotation
       navigationController?.pushViewController(photoAlbum, animated: true)
     }
   }
@@ -123,7 +180,6 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
   // MARK: - Gesture Recognizer
   
   func longPress(recognizer: UILongPressGestureRecognizer) {
-    println("long press")
     if recognizer.state != .Began {
       return
     }

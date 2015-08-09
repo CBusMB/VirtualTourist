@@ -12,10 +12,10 @@ import MapKit
 /// Model class used to persist last viewed map location
 class MapRegion: NSObject, NSCoding
 {
-  var latitude: CLLocationDegrees = 0.0
-  var longitude: CLLocationDegrees = 0.0
-  var latitudeDelta: CLLocationDegrees = 0.0
-  var longitudeDelta: CLLocationDegrees = 0.0
+  var latitude: CLLocationDegrees
+  var longitude: CLLocationDegrees
+  var latitudeDelta: CLLocationDegrees
+  var longitudeDelta: CLLocationDegrees
   
   init(region: MKCoordinateRegion) {
     latitude = region.center.latitude
@@ -25,11 +25,11 @@ class MapRegion: NSObject, NSCoding
   }
   
   required init(coder unarchiver: NSCoder) {
-    super.init()
     latitude = unarchiver.decodeObjectForKey(Keys.Latitude) as! CLLocationDegrees
     longitude = unarchiver.decodeObjectForKey(Keys.Longitude) as! CLLocationDegrees
     latitudeDelta = unarchiver.decodeObjectForKey(Keys.LatitudeDelta) as! CLLocationDegrees
     longitudeDelta = unarchiver.decodeObjectForKey(Keys.LongitudeDelta) as! CLLocationDegrees
+    super.init()
   }
   
   func encodeWithCoder(archiver: NSCoder) {
