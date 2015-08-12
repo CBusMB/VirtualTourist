@@ -14,7 +14,22 @@ struct Keys {
 }
 
 struct Flickr {
-  static let Key = "bb74c0ee2d63bfcb1d090ac649c51a25"
+  static let APIValue = "bb74c0ee2d63bfcb1d090ac649c51a25"
   static let Secret = "96e030e2f88836d7"
+  static let BaseURL = "https://api.flickr.com/services/rest"
+  static let MethodKey = "method"
+  static let MethodValue = "flickr.photos.search"
+  static let APIKey = "api_key"
+  static let DataFormatValue = "json"
+  static let DataFormatKey = "format"
+  static let BboxKey = "bbox"
+  static let SafeSearchKey = "safe_search"
+  static let ExtrasKey = "extras"
+  static let NoJSONKey = "nojsoncallback"
+  static let ExtrasValue = "url_t"
+  static let SafeSearchValue = "1"
+  static let NoJSONValue = "1"
+  static let PerPageKey = "per_page"
+  static let PerPageValue = "21"
+  static let BoundingBoxCoordinateAdjustment = 0.15
 }
-

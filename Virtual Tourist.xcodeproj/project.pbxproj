@@ -21,9 +21,8 @@
 		329B21151B7051C000ACB972 /* Location.swift in Sources */ = {isa = PBXBuildFile; fileRef = 329B21141B7051C000ACB972 /* Location.swift */; };
 		329B21171B7051D500ACB972 /* PhotoAlbum.swift in Sources */ = {isa = PBXBuildFile; fileRef = 329B21161B7051D500ACB972 /* PhotoAlbum.swift */; };
 		329B21191B7054E800ACB972 /* VirtualTouristConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 329B21181B7054E800ACB972 /* VirtualTouristConstants.swift */; };
+		32AB20D01B7987B900E6ADE0 /* BoundingBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32AB20CF1B7987B900E6ADE0 /* BoundingBox.swift */; };
 		32CA22AF1B77B90700754052 /* FlickrClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32CA22AE1B77B90700754052 /* FlickrClient.swift */; };
-		AD92A91AF770F3DFE0AF5D17 /* Pods_Virtual_Tourist.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F5620810F8A9EC3A802C3B10 /* Pods_Virtual_Tourist.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
-		D3839CBF8E71553FEAF657E4 /* Pods.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D217507F3121339D9E0EE1CD /* Pods.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -55,11 +54,10 @@
 		329B21141B7051C000ACB972 /* Location.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Location.swift; sourceTree = "<group>"; };
 		329B21161B7051D500ACB972 /* PhotoAlbum.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PhotoAlbum.swift; sourceTree = "<group>"; };
 		329B21181B7054E800ACB972 /* VirtualTouristConstants.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VirtualTouristConstants.swift; sourceTree = "<group>"; };
+		32AB20CF1B7987B900E6ADE0 /* BoundingBox.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BoundingBox.swift; sourceTree = "<group>"; };
 		32CA22AE1B77B90700754052 /* FlickrClient.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FlickrClient.swift; sourceTree = "<group>"; };
-		5EB491E8650FD41C50EBA1E5 /* Pods-Virtual Tourist.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Virtual Tourist.release.xcconfig"; path = "Pods/Target Support Files/Pods-Virtual Tourist/Pods-Virtual Tourist.release.xcconfig"; sourceTree = "<group>"; };
-		C156A3CAF3066D801D825815 /* Pods-Virtual Tourist.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Virtual Tourist.debug.xcconfig"; path = "Pods/Target Support Files/Pods-Virtual Tourist/Pods-Virtual Tourist.debug.xcconfig"; sourceTree = "<group>"; };
-		D217507F3121339D9E0EE1CD /* Pods.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		F5620810F8A9EC3A802C3B10 /* Pods_Virtual_Tourist.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Virtual_Tourist.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		C6E4FC45E5121BD1AEF8203B /* Pods-Virtual Tourist.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Virtual Tourist.release.xcconfig"; path = "Pods/Target Support Files/Pods-Virtual Tourist/Pods-Virtual Tourist.release.xcconfig"; sourceTree = "<group>"; };
+		D27E7E75325C24F29704881B /* Pods-Virtual Tourist.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Virtual Tourist.debug.xcconfig"; path = "Pods/Target Support Files/Pods-Virtual Tourist/Pods-Virtual Tourist.debug.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -67,8 +65,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D3839CBF8E71553FEAF657E4 /* Pods.framework in Frameworks */,
-				AD92A91AF770F3DFE0AF5D17 /* Pods_Virtual_Tourist.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -82,14 +78,23 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		2BCA6DC0F07281393375915E /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				D27E7E75325C24F29704881B /* Pods-Virtual Tourist.debug.xcconfig */,
+				C6E4FC45E5121BD1AEF8203B /* Pods-Virtual Tourist.release.xcconfig */,
+			);
+			name = Pods;
+			sourceTree = "<group>";
+		};
 		329B20DB1B702CDF00ACB972 = {
 			isa = PBXGroup;
 			children = (
 				329B20E61B702CDF00ACB972 /* Virtual Tourist */,
 				329B20FF1B702CDF00ACB972 /* Virtual TouristTests */,
 				329B20E51B702CDF00ACB972 /* Products */,
-				F768BE36C8D484AE67E559F8 /* Pods */,
 				D4CB2FF060901E7205FD897A /* Frameworks */,
+				2BCA6DC0F07281393375915E /* Pods */,
 			);
 			sourceTree = "<group>";
 		};
@@ -168,6 +173,7 @@
 		32CA22B01B77B90F00754052 /* FlickrClient */ = {
 			isa = PBXGroup;
 			children = (
+				32AB20CF1B7987B900E6ADE0 /* BoundingBox.swift */,
 				32CA22AE1B77B90700754052 /* FlickrClient.swift */,
 			);
 			name = FlickrClient;
@@ -176,19 +182,8 @@
 		D4CB2FF060901E7205FD897A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				D217507F3121339D9E0EE1CD /* Pods.framework */,
-				F5620810F8A9EC3A802C3B10 /* Pods_Virtual_Tourist.framework */,
 			);
 			name = Frameworks;
-			sourceTree = "<group>";
-		};
-		F768BE36C8D484AE67E559F8 /* Pods */ = {
-			isa = PBXGroup;
-			children = (
-				C156A3CAF3066D801D825815 /* Pods-Virtual Tourist.debug.xcconfig */,
-				5EB491E8650FD41C50EBA1E5 /* Pods-Virtual Tourist.release.xcconfig */,
-			);
-			name = Pods;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -345,6 +340,7 @@
 				329B210F1B703B9A00ACB972 /* TravelLocationsMapViewController.swift in Sources */,
 				32529F791B72CCF000CF7573 /* MapRegion.swift in Sources */,
 				32529F7B1B74C5C100CF7573 /* DeleteInstructionsView.swift in Sources */,
+				32AB20D01B7987B900E6ADE0 /* BoundingBox.swift in Sources */,
 				329B210D1B702D7C00ACB972 /* CoreDataStackManager.swift in Sources */,
 				329B20ED1B702CDF00ACB972 /* Virtual_Tourist.xcdatamodeld in Sources */,
 				329B21171B7051D500ACB972 /* PhotoAlbum.swift in Sources */,
@@ -396,7 +392,6 @@
 /* Begin XCBuildConfiguration section */
 		329B21041B702CDF00ACB972 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = C156A3CAF3066D801D825815 /* Pods-Virtual Tourist.debug.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
@@ -478,7 +473,7 @@
 		};
 		329B21071B702CDF00ACB972 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = C156A3CAF3066D801D825815 /* Pods-Virtual Tourist.debug.xcconfig */;
+			baseConfigurationReference = D27E7E75325C24F29704881B /* Pods-Virtual Tourist.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				INFOPLIST_FILE = "Virtual Tourist/Info.plist";
@@ -489,7 +484,7 @@
 		};
 		329B21081B702CDF00ACB972 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 5EB491E8650FD41C50EBA1E5 /* Pods-Virtual Tourist.release.xcconfig */;
+			baseConfigurationReference = C6E4FC45E5121BD1AEF8203B /* Pods-Virtual Tourist.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				INFOPLIST_FILE = "Virtual Tourist/Info.plist";
@@ -500,7 +495,6 @@
 		};
 		329B210A1B702CDF00ACB972 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = C156A3CAF3066D801D825815 /* Pods-Virtual Tourist.debug.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				FRAMEWORK_SEARCH_PATHS = (
@@ -520,7 +514,6 @@
 		};
 		329B210B1B702CDF00ACB972 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = C156A3CAF3066D801D825815 /* Pods-Virtual Tourist.debug.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				FRAMEWORK_SEARCH_PATHS = (

@@ -103,9 +103,9 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
   /// :param: viewHeightForOffset Use this value to set the y position of the viewToAnimate relative to its super view.
   func viewToAnimateRect(viewHeightForOffset height: CGFloat) -> CGRect {
     return CGRect(x: view.frame.origin.x,
-                  y: view.frame.height - height,
-              width: view.frame.width,
-             height: view.frame.height / 8)
+      y: view.frame.height - height,
+      width: view.frame.width,
+      height: view.frame.height / 8)
   }
   
   /// Set up a notification for when the orientation of the device changes
@@ -144,17 +144,20 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
       pinAnnotationView!.canShowCallout = false
       pinAnnotationView!.pinColor = .Red
       pinAnnotationView?.animatesDrop = true
-    }
-    else {
+    } else {
       pinAnnotationView!.annotation = annotation
     }
-    
     return pinAnnotationView
   }
   
   func mapView(mapView: MKMapView!, didSelectAnnotationView view: MKAnnotationView!) {
     if editing {
-      editing = false
+      let locations = fetchedResultsController.fetchedObjects as! [Location]
+      let locationToDelete = locations.filter
+        { $0.latitude == view.annotation.coordinate.latitude && $0.longitude == view.annotation.coordinate.longitude }
+      sharedContext.deleteObject(locationToDelete.first!)
+      mapView.removeAnnotation(view.annotation)
+      CoreDataStackManager.sharedInstance.saveContext()
     } else {
       let storyboard = UIStoryboard(name: "Main", bundle: nil)
       let photoAlbum = storyboard.instantiateViewControllerWithIdentifier("PhotoAlbumViewController") as! PhotoAlbumViewController
@@ -188,9 +191,20 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
     let pinLocation = MKPointAnnotation()
     pinLocation.coordinate = touchCoordinate
     mapView.addAnnotation(pinLocation)
+    preFetchLocationDataForCoordinate(pinLocation.coordinate)
     addLocationToContextForCoordinate(touchCoordinate)
   }
   
+  func preFetchLocationDataForCoordinate(coordinate: CLLocationCoordinate2D) {
+    let bBox = BoundingBox(longitude: coordinate.longitude, latitude: coordinate.latitude)
+    FlickrClient.searchByBoundingBox(bBox) { success, message, photoURLs in
+      if success {
+        println("\(photoURLs)")
+      }
+      return
+    }
+    
+  }
   
   // MARK: - Core Data related methods and properties
   
