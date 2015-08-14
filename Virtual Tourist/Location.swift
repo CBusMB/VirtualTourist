@@ -19,15 +19,15 @@ class Location: NSManagedObject
     super.init(entity: entity, insertIntoManagedObjectContext: context)
   }
   
-  init(dictionary: [String : AnyObject], context: NSManagedObjectContext) {
+  init(latitude: Double, longitude: Double, context: NSManagedObjectContext) {
     
     // Core Data
     let entity =  NSEntityDescription.entityForName("Location", inManagedObjectContext: context)!
     super.init(entity: entity, insertIntoManagedObjectContext: context)
     
     // Dictionary
-    latitude = dictionary[Keys.Latitude] as! Double
-    longitude = dictionary[Keys.Longitude] as! Double
+    self.latitude = latitude
+    self.longitude = longitude
   }
 
 

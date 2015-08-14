@@ -33,10 +33,11 @@ class FlickrClient
         } else {
           if let parsedJson = jsonData {
             let results = parsedJson["photos"] as! NSDictionary
+            println("\(results)")
             let photoURLs = results["photo"] as! [NSDictionary]
             let urls = photoURLs.map { $0["url_t"] as! String }
             completionHandler(success: true, message: nil, flickrPhotoURLs: urls)
-          }
+          } // TODO: - Error handling
         }
       }
     }

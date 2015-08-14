@@ -3,12 +3,12 @@
     <entity name="Location" representedClassName="Location" syncable="YES">
         <attribute name="latitude" attributeType="Double" defaultValueString="0.0" syncable="YES"/>
         <attribute name="longitude" attributeType="Double" defaultValueString="0.0" syncable="YES"/>
-        <relationship name="photoAlbum" optional="YES" maxCount="1" deletionRule="Cascade" destinationEntity="PhotoAlbum" inverseName="location" inverseEntity="PhotoAlbum" syncable="YES"/>
+        <relationship name="photoAlbum" optional="YES" toMany="YES" deletionRule="Cascade" ordered="YES" destinationEntity="PhotoAlbum" inverseName="location" inverseEntity="PhotoAlbum" syncable="YES"/>
     </entity>
     <entity name="PhotoAlbum" representedClassName="PhotoAlbum" syncable="YES">
         <attribute name="numberOfPhotosInAlbum" attributeType="Integer 64" defaultValueString="0" syncable="YES"/>
         <attribute name="photo" optional="YES" attributeType="Binary" syncable="YES"/>
-        <relationship name="location" optional="YES" maxCount="1" deletionRule="Cascade" destinationEntity="Location" inverseName="photoAlbum" inverseEntity="Location" syncable="YES"/>
+        <relationship name="location" maxCount="1" deletionRule="Cascade" destinationEntity="Location" inverseName="photoAlbum" inverseEntity="Location" syncable="YES"/>
     </entity>
     <elements>
         <element name="Location" positionX="-9" positionY="36" width="128" height="90"/>

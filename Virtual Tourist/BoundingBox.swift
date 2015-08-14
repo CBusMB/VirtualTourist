@@ -21,7 +21,6 @@ struct BoundingBox
   }
   
   func boundingBoxForMethodParameters() -> String {
-    println("\(bottomLeftLongitude), \(bottomLeftLatitude), \(topRightLongitude), \(topRightLatitude)")
     return "\(bottomLeftLongitude), \(bottomLeftLatitude), \(topRightLongitude), \(topRightLatitude)"
   }
 }

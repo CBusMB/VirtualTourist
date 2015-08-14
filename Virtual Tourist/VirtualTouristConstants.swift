@@ -31,5 +31,5 @@ struct Flickr {
   static let NoJSONValue = "1"
   static let PerPageKey = "per_page"
   static let PerPageValue = "21"
-  static let BoundingBoxCoordinateAdjustment = 0.15
+  static let BoundingBoxCoordinateAdjustment = 0.09
 }

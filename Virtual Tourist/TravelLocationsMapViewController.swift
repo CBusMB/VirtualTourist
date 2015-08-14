@@ -151,17 +151,19 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
   }
   
   func mapView(mapView: MKMapView!, didSelectAnnotationView view: MKAnnotationView!) {
+    let locations = fetchedResultsController.fetchedObjects as! [Location]
+    /// Filter locations to get a location item that matches the selected annotationView.  Use .first to get the location from the array.
+    let locationForAnnotationView = locations.filter
+      { $0.latitude == view.annotation.coordinate.latitude && $0.longitude == view.annotation.coordinate.longitude }
     if editing {
-      let locations = fetchedResultsController.fetchedObjects as! [Location]
-      let locationToDelete = locations.filter
-        { $0.latitude == view.annotation.coordinate.latitude && $0.longitude == view.annotation.coordinate.longitude }
-      sharedContext.deleteObject(locationToDelete.first!)
+      sharedContext.deleteObject(locationForAnnotationView.first!)
       mapView.removeAnnotation(view.annotation)
       CoreDataStackManager.sharedInstance.saveContext()
     } else {
       let storyboard = UIStoryboard(name: "Main", bundle: nil)
       let photoAlbum = storyboard.instantiateViewControllerWithIdentifier("PhotoAlbumViewController") as! PhotoAlbumViewController
       photoAlbum.annotation = view.annotation
+      photoAlbum.location = locationForAnnotationView.first
       navigationController?.pushViewController(photoAlbum, animated: true)
     }
   }
@@ -191,19 +193,29 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
     let pinLocation = MKPointAnnotation()
     pinLocation.coordinate = touchCoordinate
     mapView.addAnnotation(pinLocation)
-    preFetchLocationDataForCoordinate(pinLocation.coordinate)
     addLocationToContextForCoordinate(touchCoordinate)
   }
   
-  func preFetchLocationDataForCoordinate(coordinate: CLLocationCoordinate2D) {
-    let bBox = BoundingBox(longitude: coordinate.longitude, latitude: coordinate.latitude)
+  // MARK: - Photo Downloading
+  
+  func preFetchLocationDataForLocation(location: Location) {
+    let bBox = BoundingBox(longitude: location.longitude as Double, latitude: location.latitude as Double)
     FlickrClient.searchByBoundingBox(bBox) { success, message, photoURLs in
-      if success {
-        println("\(photoURLs)")
+      if success { // TODO: - add error handling
+        self.fetchPhotosFromURLs(photoURLs!, forLocation: location)
       }
-      return
     }
-    
+  }
+  
+  func fetchPhotosFromURLs(urls: [String], forLocation location: Location) {
+    let photoManager = PhotoURLManager(urls: urls)
+    let photos = photoManager.randomURLs()
+    for photo in photos {
+      let imageData = NSData(contentsOfURL: NSURL(string: photo)!)
+      let album = PhotoAlbum(photo: imageData!, location: location, context: sharedContext)
+      album.location = location
+    }
+    CoreDataStackManager.sharedInstance.saveContext()
   }
   
   // MARK: - Core Data related methods and properties
@@ -219,8 +231,9 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
       Keys.Longitude : coordinate.longitude
     ]
     
-    let location = Location(dictionary: locationAttributes, context: sharedContext)
+    let location = Location(latitude: coordinate.latitude, longitude: coordinate.longitude, context: sharedContext)
     CoreDataStackManager.sharedInstance.saveContext()
+    preFetchLocationDataForLocation(location)
   }
   
   lazy var fetchedResultsController: NSFetchedResultsController = {
