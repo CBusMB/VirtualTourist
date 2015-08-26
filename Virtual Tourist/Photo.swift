@@ -1,5 +1,5 @@
 //
-//  PhotoAlbum.swift
+//  Photo.swift
 //  Virtual Tourist
 //
 //  Created by Matthew Brown on 8/3/15.
@@ -8,25 +8,25 @@
 
 import CoreData
 
-@objc(PhotoAlbum)
-class PhotoAlbum: NSManagedObject
+@objc(Photo)
+class Photo: NSManagedObject
 {
-  @NSManaged var photo: NSData?
-  //@NSManaged var numberOfPhotosInAlbum: NSNumber
-  @NSManaged var location: Location?
+  @NSManaged var photo: String?
+  @NSManaged var numberOfPhotosInAlbum: NSNumber
+  @NSManaged var location: Pin?
   
   override init(entity: NSEntityDescription, insertIntoManagedObjectContext context: NSManagedObjectContext?) {
     super.init(entity: entity, insertIntoManagedObjectContext: context)
   }
   
-  init(photo: NSData, location: Location, context: NSManagedObjectContext) {
+  init(photoURL: String, location: Pin, photoAlbumCount: NSNumber, context: NSManagedObjectContext) {
     
     // Core Data
-    let entity =  NSEntityDescription.entityForName("PhotoAlbum", inManagedObjectContext: context)!
+    let entity =  NSEntityDescription.entityForName("Photo", inManagedObjectContext: context)!
     super.init(entity: entity, insertIntoManagedObjectContext: context)
     
-    self.photo = photo
+    photo = photoURL
     self.location = location
+    numberOfPhotosInAlbum = photoAlbumCount
   }
-
 }

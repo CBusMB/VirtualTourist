@@ -1,5 +1,5 @@
 //
-//  Location.swift
+//  Pin.swift
 //  Virtual Tourist
 //
 //  Created by Matthew Brown on 8/3/15.
@@ -8,12 +8,12 @@
 
 import CoreData
 
-@objc(Location)
-class Location: NSManagedObject
+@objc(Pin)
+class Pin: NSManagedObject
 {
   @NSManaged var latitude: NSNumber
   @NSManaged var longitude: NSNumber
-  @NSManaged var photoAlbum: [PhotoAlbum]?
+  @NSManaged var photoAlbum: [Photo]?
   
   override init(entity: NSEntityDescription, insertIntoManagedObjectContext context: NSManagedObjectContext?) {
     super.init(entity: entity, insertIntoManagedObjectContext: context)
@@ -22,12 +22,13 @@ class Location: NSManagedObject
   init(latitude: Double, longitude: Double, context: NSManagedObjectContext) {
     
     // Core Data
-    let entity =  NSEntityDescription.entityForName("Location", inManagedObjectContext: context)!
+    let entity =  NSEntityDescription.entityForName("Pin", inManagedObjectContext: context)!
     super.init(entity: entity, insertIntoManagedObjectContext: context)
     
     // Dictionary
     self.latitude = latitude
     self.longitude = longitude
+    println("longitude in init \(self.longitude)")
   }
 
 

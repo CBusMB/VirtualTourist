@@ -14,9 +14,14 @@ struct PhotoURLManager
   
   func randomURLs() -> [String] {
     var urlArray = [String]()
-    for var i = 0; i < 21; i++ {
+    var defaultCount = 21
+    if urls.count < 21 {
+      defaultCount = urls.count
+    }
+    for var i = 0; i < defaultCount; i++ {
       let randomIndex = Int(arc4random_uniform(UInt32(urls.count)))
       let randomURL = urls[randomIndex]
+      println("randomURL \(randomURL)")
       urlArray.append(randomURL)
     }
     return urlArray

@@ -17,9 +17,21 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
   var deletedIndexPaths: [NSIndexPath]?
   var updatedIndexPaths: [NSIndexPath]?
   
+  // MARK: - Map View
   @IBOutlet weak var mapView: MKMapView! {
     didSet {
      mapView.scrollEnabled = false
+    }
+  }
+  
+  func configureMapView() {
+    if let coordinate = annotation?.coordinate {
+      let center = CLLocationCoordinate2D(latitude: coordinate.latitude, longitude: coordinate.longitude)
+      let mapRegion = MKCoordinateRegion(center: center, span: MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1))
+      mapView.setRegion(mapRegion, animated: false)
+      let annotationPin = MKPointAnnotation()
+      annotationPin.coordinate = coordinate
+      mapView.addAnnotation(annotationPin)
     }
   }
   
@@ -27,37 +39,30 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
   @IBOutlet weak var refreshButton: UIBarButtonItem!
   
   var annotation: MKAnnotation?
-  var location: Location?
   
+  // MARK: - Lifecycle
   override func viewDidLoad() {
     super.viewDidLoad()
-    if let coordinate = annotation?.coordinate {
-      let center = CLLocationCoordinate2D(latitude: coordinate.latitude, longitude: coordinate.longitude)
-      
-      let mapRegion = MKCoordinateRegion(center: center, span: MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1))
-      mapView.setRegion(mapRegion, animated: false)
-      let annotationPin = MKPointAnnotation()
-      annotationPin.coordinate = coordinate
-      mapView.addAnnotation(annotationPin)
-      
-      var error: NSError?
-      fetchedResultsController.performFetch(&error) // TODO: - Handle errors
-    }
+    configureMapView()
+    var error: NSError?
+    fetchedResultsController.performFetch(&error) // TODO: - Handle errors
+    photoAlbumCollectionView.delegate = self
+    photoAlbumCollectionView.dataSource = self
   }
-
+  
   // MARK: - Core Data
   var sharedContext: NSManagedObjectContext {
     return CoreDataStackManager.sharedInstance.managedObjectContext!
   }
   
   lazy var fetchedResultsController: NSFetchedResultsController = {
-    let locationLatitude = self.location!.latitude as NSNumber
-    let locationLongitude = self.location!.longitude as NSNumber
-    let fetchRequest = NSFetchRequest(entityName: "Location")
+    let locationLatitude: NSNumber = self.annotation!.coordinate.latitude
+    let locationLongitude: NSNumber = self.annotation!.coordinate.longitude
+    let fetchRequest = NSFetchRequest(entityName: "Pin")
     fetchRequest.sortDescriptors = []
     fetchRequest.predicate = NSCompoundPredicate(type: .AndPredicateType,
-                                        subpredicates: [NSPredicate(format: "%K == %@", "latitude", "locationLatitude"),
-                                                        NSPredicate(format: "%K == %@", "longitude", "locationLongitude")])
+                                        subpredicates: [NSPredicate(format: "%K == %@", "latitude", locationLatitude),
+                                                        NSPredicate(format: "%K == %@", "longitude", locationLongitude)])
     
     let fetchedResultsController = NSFetchedResultsController(fetchRequest: fetchRequest,
                                                       managedObjectContext: self.sharedContext,
@@ -77,25 +82,37 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
     layout.minimumLineSpacing = 5
     layout.minimumInteritemSpacing = 5
     
-    let width = floor(photoAlbumCollectionView.frame.size.width/3)
+    let width = floor(photoAlbumCollectionView.frame.size.width / 3)
     layout.itemSize = CGSize(width: width, height: width)
     photoAlbumCollectionView.collectionViewLayout = layout
   }
   
   func configureCell(cell: PhotoAlbumCollectionViewCell, atIndexPath indexPath: NSIndexPath) {
-    let photo = fetchedResultsController.objectAtIndexPath(indexPath) as! PhotoAlbum
+    let pin = fetchedResultsController.fetchedObjects?.first as! Pin
     if let index = find(selectedIndexes, indexPath) {
       cell.alpha = 0.09
     } else {
       cell.alpha = 1.0
     }
+    var image = UIImage()
+    if let pinLocation = pin.photoAlbum {
+      let imageURL = pinLocation[indexPath.item].photo
+      image = ImageManager.getPhotoForURL(imageURL!)
+    }
+    let imageView = UIImageView(image: image)
+    imageView.contentMode = .ScaleToFill
+    cell.backgroundView = imageView
   }
 
   func collectionView(collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-    let sectionInfo = fetchedResultsController.sections![section] as! NSFetchedResultsSectionInfo
-    
-    println("number Of Cells: \(sectionInfo.numberOfObjects)")
-    return sectionInfo.numberOfObjects
+    // let sectionInfo = fetchedResultsController.sections![section] as! NSFetchedResultsSectionInfo
+    let pin = fetchedResultsController.fetchedObjects?.first as! Pin
+    var numberOfCells = Int()
+    if let pinPhotoURLs = pin.photoAlbum {
+      numberOfCells = pinPhotoURLs.count
+    }
+    println("number Of Cells: \(numberOfCells)")
+    return numberOfCells
   }
   
   func collectionView(collectionView: UICollectionView, cellForItemAtIndexPath indexPath: NSIndexPath) -> UICollectionViewCell {

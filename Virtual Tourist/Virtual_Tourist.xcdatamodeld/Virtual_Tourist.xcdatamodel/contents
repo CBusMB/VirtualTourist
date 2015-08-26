@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<model userDefinedModelVersionIdentifier="" type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="7701" systemVersion="14E46" minimumToolsVersion="Automatic" macOSVersion="Automatic" iOSVersion="Automatic">
-    <entity name="Location" representedClassName="Location" syncable="YES">
+<model userDefinedModelVersionIdentifier="" type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="7701" systemVersion="14F27" minimumToolsVersion="Automatic" macOSVersion="Automatic" iOSVersion="Automatic">
+    <entity name="Photo" representedClassName="Photo" syncable="YES">
+        <attribute name="numberOfPhotosInAlbum" attributeType="Integer 64" defaultValueString="0" syncable="YES"/>
+        <attribute name="photo" optional="YES" attributeType="String" valueTransformerName="ImageTransformer" allowsExternalBinaryDataStorage="YES" syncable="YES"/>
+        <relationship name="location" maxCount="1" deletionRule="Cascade" destinationEntity="Pin" inverseName="photoAlbum" inverseEntity="Pin" syncable="YES"/>
+    </entity>
+    <entity name="Pin" representedClassName="Pin" syncable="YES">
         <attribute name="latitude" attributeType="Double" defaultValueString="0.0" syncable="YES"/>
         <attribute name="longitude" attributeType="Double" defaultValueString="0.0" syncable="YES"/>
-        <relationship name="photoAlbum" optional="YES" toMany="YES" deletionRule="Cascade" ordered="YES" destinationEntity="PhotoAlbum" inverseName="location" inverseEntity="PhotoAlbum" syncable="YES"/>
-    </entity>
-    <entity name="PhotoAlbum" representedClassName="PhotoAlbum" syncable="YES">
-        <attribute name="numberOfPhotosInAlbum" attributeType="Integer 64" defaultValueString="0" syncable="YES"/>
-        <attribute name="photo" optional="YES" attributeType="Binary" syncable="YES"/>
-        <relationship name="location" maxCount="1" deletionRule="Cascade" destinationEntity="Location" inverseName="photoAlbum" inverseEntity="Location" syncable="YES"/>
+        <relationship name="photoAlbum" optional="YES" toMany="YES" deletionRule="Cascade" ordered="YES" destinationEntity="Photo" inverseName="location" inverseEntity="Photo" syncable="YES"/>
     </entity>
     <elements>
-        <element name="Location" positionX="-9" positionY="36" width="128" height="90"/>
-        <element name="PhotoAlbum" positionX="-9" positionY="63" width="128" height="90"/>
+        <element name="Pin" positionX="-9" positionY="36" width="128" height="90"/>
+        <element name="Photo" positionX="-9" positionY="63" width="128" height="90"/>
     </elements>
 </model>

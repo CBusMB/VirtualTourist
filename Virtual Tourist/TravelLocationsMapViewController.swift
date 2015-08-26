@@ -42,12 +42,14 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
   
   var currentOrientation: UIDeviceOrientation?
   
+  var droppedPin: MKPointAnnotation?
+  
   /// sets regionToArchive so that the last location is saved for the next time the app is opened
   func saveLastUserLocation(notification: NSNotification) {
     regionToArchive = mapView.region
   }
   
-  var regionFilePath : String {
+  var regionFilePath: String {
     let manager = NSFileManager.defaultManager()
     let url = manager.URLsForDirectory(.DocumentDirectory, inDomains: .UserDomainMask).first as! NSURL
     return url.URLByAppendingPathComponent("region").path!
@@ -151,19 +153,24 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
   }
   
   func mapView(mapView: MKMapView!, didSelectAnnotationView view: MKAnnotationView!) {
-    let locations = fetchedResultsController.fetchedObjects as! [Location]
-    /// Filter locations to get a location item that matches the selected annotationView.  Use .first to get the location from the array.
-    let locationForAnnotationView = locations.filter
-      { $0.latitude == view.annotation.coordinate.latitude && $0.longitude == view.annotation.coordinate.longitude }
     if editing {
-      sharedContext.deleteObject(locationForAnnotationView.first!)
-      mapView.removeAnnotation(view.annotation)
-      CoreDataStackManager.sharedInstance.saveContext()
+      var error: NSError?
+      /// perform a fetch so that we can be sure to get Pins that were just added
+      fetchedResultsController.performFetch(&error)
+      let locations = fetchedResultsController.fetchedObjects as! [Pin]
+      /// Filter locations to get a location item that matches the selected annotationView.  Use .first to get the location from the array.
+      let selectedLocation = locations.filter
+        { $0.latitude == view.annotation.coordinate.latitude && $0.longitude == view.annotation.coordinate.longitude }
+      if let pin = selectedLocation.first {
+        ImageManager.deletePhotosAtPathComponents(pin.photoAlbum!)
+        sharedContext.deleteObject(pin)
+        mapView.removeAnnotation(view.annotation)
+        CoreDataStackManager.sharedInstance.saveContext()
+      }
     } else {
       let storyboard = UIStoryboard(name: "Main", bundle: nil)
       let photoAlbum = storyboard.instantiateViewControllerWithIdentifier("PhotoAlbumViewController") as! PhotoAlbumViewController
       photoAlbum.annotation = view.annotation
-      photoAlbum.location = locationForAnnotationView.first
       navigationController?.pushViewController(photoAlbum, animated: true)
     }
   }
@@ -173,7 +180,7 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
   }
   
   func addLocationPinsToMap() {
-    let fetchedLocations = fetchedResultsController.fetchedObjects as! [Location]
+    let fetchedLocations = fetchedResultsController.fetchedObjects as! [Pin]
     let annotations: [MKPointAnnotation] = fetchedLocations.map { (location) -> MKPointAnnotation in
       var annotation = MKPointAnnotation()
       annotation.coordinate = CLLocationCoordinate2D(latitude: location.latitude as Double, longitude: location.longitude as Double)
@@ -190,32 +197,40 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
     }
     let touchPoint = recognizer.locationInView(mapView)
     let touchCoordinate = mapView.convertPoint(touchPoint, toCoordinateFromView: mapView)
-    let pinLocation = MKPointAnnotation()
-    pinLocation.coordinate = touchCoordinate
-    mapView.addAnnotation(pinLocation)
-    addLocationToContextForCoordinate(touchCoordinate)
+    droppedPin = MKPointAnnotation()
+    droppedPin!.coordinate = touchCoordinate
+    mapView.addAnnotation(droppedPin)
+    let location = addLocationToContextForCoordinate(touchCoordinate)
+    preFetchPhotoDataForLocation(location)
   }
   
-  // MARK: - Photo Downloading
+  // MARK: - URL / Photo Downloading
   
-  func preFetchLocationDataForLocation(location: Location) {
-    let bBox = BoundingBox(longitude: location.longitude as Double, latitude: location.latitude as Double)
-    FlickrClient.searchByBoundingBox(bBox) { success, message, photoURLs in
+  func preFetchPhotoDataForLocation(location: Pin) {
+    let boundingBox = BoundingBox(longitude: location.longitude as Double, latitude: location.latitude as Double)
+    FlickrClient.searchByBoundingBox(boundingBox) { success, message, photoURLs in
       if success { // TODO: - add error handling
-        self.fetchPhotosFromURLs(photoURLs!, forLocation: location)
-      }
+        self.persistURLs(photoURLs!, forLocation: location)
+      } // TODO: - add alerts, remove pin if no photos exist for that location
+      // remove var droppedPin from mapView in completion handler of alert view
     }
   }
   
-  func fetchPhotosFromURLs(urls: [String], forLocation location: Location) {
+  /// Select 21 random URLs, add to CoreData context
+  func persistURLs(urls: [String], forLocation location: Pin) {
     let photoManager = PhotoURLManager(urls: urls)
     let photos = photoManager.randomURLs()
     for photo in photos {
-      let imageData = NSData(contentsOfURL: NSURL(string: photo)!)
-      let album = PhotoAlbum(photo: imageData!, location: location, context: sharedContext)
-      album.location = location
+      let photoURL = Photo(photoURL: photo, location: location, photoAlbumCount: photos.count, context: sharedContext)
     }
+    downloadAndSavePhotosFromURLs(photos)
     CoreDataStackManager.sharedInstance.saveContext()
+  }
+  
+  /// download photos for given URLs
+  func downloadAndSavePhotosFromURLs(urls: [String]) {
+    let album = PhotoDownloadManager.downloadPhotos(urls)
+    ImageManager.savePhotoAlbum(album, withPathComponent: urls)
   }
   
   // MARK: - Core Data related methods and properties
@@ -225,20 +240,20 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
   }
   
   /// Add the location to the CoreData context
-  func addLocationToContextForCoordinate(coordinate: CLLocationCoordinate2D) {
+  func addLocationToContextForCoordinate(coordinate: CLLocationCoordinate2D) -> Pin {
     let locationAttributes = [
       Keys.Latitude : coordinate.latitude,
       Keys.Longitude : coordinate.longitude
     ]
     
-    let location = Location(latitude: coordinate.latitude, longitude: coordinate.longitude, context: sharedContext)
+    let location = Pin(latitude: coordinate.latitude, longitude: coordinate.longitude, context: sharedContext)
     CoreDataStackManager.sharedInstance.saveContext()
-    preFetchLocationDataForLocation(location)
+    return location
   }
   
   lazy var fetchedResultsController: NSFetchedResultsController = {
     
-    let fetchRequest = NSFetchRequest(entityName: "Location")
+    let fetchRequest = NSFetchRequest(entityName: "Pin")
     fetchRequest.sortDescriptors = []
     
     let fetchedResultsController = NSFetchedResultsController(fetchRequest: fetchRequest, managedObjectContext: self.sharedContext, sectionNameKeyPath: nil, cacheName: nil)

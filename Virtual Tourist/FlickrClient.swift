@@ -34,9 +34,13 @@ class FlickrClient
           if let parsedJson = jsonData {
             let results = parsedJson["photos"] as! NSDictionary
             println("\(results)")
-            let photoURLs = results["photo"] as! [NSDictionary]
-            let urls = photoURLs.map { $0["url_t"] as! String }
-            completionHandler(success: true, message: nil, flickrPhotoURLs: urls)
+            if results["total"] as! String != "0" {
+              let photoURLs = results["photo"] as! [NSDictionary]
+              let urls = photoURLs.map { $0["url_m"] as! String }
+              completionHandler(success: true, message: nil, flickrPhotoURLs: urls)
+            } else {
+              completionHandler(success: false, message: nil, flickrPhotoURLs: nil)
+            }
           } // TODO: - Error handling
         }
       }

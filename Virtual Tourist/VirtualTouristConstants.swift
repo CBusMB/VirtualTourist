@@ -11,6 +11,7 @@ struct Keys {
   static let Longitude = "longitude"
   static let LatitudeDelta = "latitudeDelta"
   static let LongitudeDelta = "longitudeDelta"
+  static let ImageData = "image"
 }
 
 struct Flickr {
@@ -26,10 +27,14 @@ struct Flickr {
   static let SafeSearchKey = "safe_search"
   static let ExtrasKey = "extras"
   static let NoJSONKey = "nojsoncallback"
-  static let ExtrasValue = "url_t"
+  static let ExtrasValue = "url_m"
   static let SafeSearchValue = "1"
   static let NoJSONValue = "1"
   static let PerPageKey = "per_page"
   static let PerPageValue = "21"
   static let BoundingBoxCoordinateAdjustment = 0.09
+}
+
+struct Constants {
+  static let StartIndex = -16
 }
