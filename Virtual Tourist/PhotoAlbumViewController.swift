@@ -48,6 +48,8 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
     fetchedResultsController.performFetch(&error) // TODO: - Handle errors
     photoAlbumCollectionView.delegate = self
     photoAlbumCollectionView.dataSource = self
+    photoAlbumCollectionView.registerClass(PhotoAlbumCollectionViewCell.self, forCellWithReuseIdentifier: Constants.CellReuseIdentifier)
+    photoAlbumCollectionView.registerClass(PhotoAlbumCollectionViewCell.self, forCellWithReuseIdentifier: Constants.PlaceholderCellReuseIdentifier)
   }
   
   // MARK: - Core Data
@@ -77,10 +79,10 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
   override func viewDidLayoutSubviews() {
     super.viewDidLayoutSubviews()
     
-    let layout : UICollectionViewFlowLayout = UICollectionViewFlowLayout()
-    layout.sectionInset = UIEdgeInsets(top: 5, left: 5, bottom: 5, right: 5)
-    layout.minimumLineSpacing = 5
-    layout.minimumInteritemSpacing = 5
+    let layout = UICollectionViewFlowLayout()
+    layout.sectionInset = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 0)
+    layout.minimumLineSpacing = 0
+    layout.minimumInteritemSpacing = 0
     
     let width = floor(photoAlbumCollectionView.frame.size.width / 3)
     layout.itemSize = CGSize(width: width, height: width)
@@ -98,26 +100,47 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
     if let pinLocation = pin.photoAlbum {
       let imageURL = pinLocation[indexPath.item].photo
       image = ImageManager.getPhotoForURL(imageURL!)
+      cell.imageView.image = image
+    } else {
+      
     }
-    let imageView = UIImageView(image: image)
-    imageView.contentMode = .ScaleToFill
-    cell.backgroundView = imageView
   }
 
   func collectionView(collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-    // let sectionInfo = fetchedResultsController.sections![section] as! NSFetchedResultsSectionInfo
     let pin = fetchedResultsController.fetchedObjects?.first as! Pin
-    var numberOfCells = Int()
+    var numberOfCells = 11
     if let pinPhotoURLs = pin.photoAlbum {
       numberOfCells = pinPhotoURLs.count
+      return numberOfCells
     }
-    println("number Of Cells: \(numberOfCells)")
     return numberOfCells
   }
   
   func collectionView(collectionView: UICollectionView, cellForItemAtIndexPath indexPath: NSIndexPath) -> UICollectionViewCell {
-    let cell = collectionView.dequeueReusableCellWithReuseIdentifier("PhotoCell", forIndexPath: indexPath) as! PhotoAlbumCollectionViewCell
-    configureCell(cell, atIndexPath: indexPath)
+    let pin = fetchedResultsController.fetchedObjects?.first as! Pin
+    var cell: PhotoAlbumCollectionViewCell!
+//    if let index = find(selectedIndexes, indexPath) {
+//      cell.alpha = 0.09
+//    } else {
+//      cell.alpha = 1.0
+//    }
+
+    if let photosForPin = pin.photoAlbum {
+      println("photos for pin: \(photosForPin.count)")
+      if photosForPin.count == 0 && indexPath.item == 0 {
+        cell = photoAlbumCollectionView.dequeueReusableCellWithReuseIdentifier(Constants.PlaceholderCellReuseIdentifier, forIndexPath: indexPath) as! PhotoAlbumCollectionViewCell
+        let activityView = UIActivityIndicatorView(activityIndicatorStyle: .WhiteLarge)
+        cell.imageView = nil
+        cell.backgroundView = activityView
+        cell.bringSubviewToFront(cell.backgroundView!)
+        activityView.startAnimating()
+      } else {
+        cell = photoAlbumCollectionView.dequeueReusableCellWithReuseIdentifier(Constants.CellReuseIdentifier, forIndexPath: indexPath) as! PhotoAlbumCollectionViewCell
+        let imageURL = photosForPin[indexPath.item].photo
+        let image = ImageManager.getPhotoForURL(imageURL!)
+        cell.imageView.image = image
+      }
+    }
     return cell
   }
   

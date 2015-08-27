@@ -218,8 +218,8 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
   
   /// Select 21 random URLs, add to CoreData context
   func persistURLs(urls: [String], forLocation location: Pin) {
-    let photoManager = PhotoURLManager(urls: urls)
-    let photos = photoManager.randomURLs()
+    let photoRandomizer = PhotoURLRandomizer()
+    let photos = photoRandomizer.randomURLs(urls)
     for photo in photos {
       let photoURL = Photo(photoURL: photo, location: location, photoAlbumCount: photos.count, context: sharedContext)
     }
@@ -229,8 +229,9 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
   
   /// download photos for given URLs
   func downloadAndSavePhotosFromURLs(urls: [String]) {
-    let album = PhotoDownloadManager.downloadPhotos(urls)
-    ImageManager.savePhotoAlbum(album, withPathComponent: urls)
+    let downloadManager = PhotoURLDownloadManager()
+    let album = downloadManager.downloadPhotoURLs(urls)
+    ImageManager.savePhotoAlbum(album, withFileName: urls)
   }
   
   // MARK: - Core Data related methods and properties
@@ -260,5 +261,5 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
     fetchedResultsController.delegate = self
     
     return fetchedResultsController
-    }()
+  }()
 }

@@ -37,4 +37,6 @@ struct Flickr {
 
 struct Constants {
   static let StartIndex = -16
+  static let CellReuseIdentifier = "PhotoCell"
+  static let PlaceholderCellReuseIdentifier = "PlaceholderCell"
 }

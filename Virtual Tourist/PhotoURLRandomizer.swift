@@ -1,5 +1,5 @@
 //
-//  PhotoURLManager.swift
+//  PhotoURLRandomizer.swift
 //  Virtual Tourist
 //
 //  Created by Matthew Brown on 8/12/15.
@@ -8,20 +8,17 @@
 
 import Foundation
 
-struct PhotoURLManager
+struct PhotoURLRandomizer
 {
-  var urls: [String]
-  
-  func randomURLs() -> [String] {
+  func randomURLs(urls: [String]) -> [String] {
     var urlArray = [String]()
     var defaultCount = 21
     if urls.count < 21 {
       defaultCount = urls.count
     }
-    for var i = 0; i < defaultCount; i++ {
+    for i in 0..<defaultCount {
       let randomIndex = Int(arc4random_uniform(UInt32(urls.count)))
       let randomURL = urls[randomIndex]
-      println("randomURL \(randomURL)")
       urlArray.append(randomURL)
     }
     return urlArray

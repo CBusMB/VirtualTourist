@@ -6,37 +6,21 @@
 //  Copyright (c) 2015 Crest Technologies. All rights reserved.
 //
 
-import Foundation
 import UIKit
 
-class ImageManager: NSObject, NSCoding
+class ImageManager
 {
-  let URLStartIndex = -16
-  var image: NSData
   
-  init(image: NSData) {
-    self.image = image
-  }
-  
-  required init(coder unarchiver: NSCoder) {
-    image = unarchiver.decodeObjectForKey(Keys.ImageData) as! NSData
-    super.init()
-  }
-  
-  func encodeWithCoder(archiver: NSCoder) {
-    archiver.encodeObject(image, forKey: Keys.ImageData)
-  }
-  
-  class func savePhotoAlbum(album: [NSData], withPathComponent pathComponent: [String]) {
+  class func savePhotoAlbum(album: [NSData], withFileName fileName: [String]) {
     let manager = NSFileManager.defaultManager()
     let url = manager.URLsForDirectory(.DocumentDirectory, inDomains: .UserDomainMask).first as! NSURL
     for i in 0..<album.count {
-      let path = pathComponent[i]
+      let path = fileName[i]
       let startIndex = advance(path.endIndex, Constants.StartIndex)
       let truncatedPathComponent = path[Range(start: startIndex, end: path.endIndex)]
       let filePath = url.URLByAppendingPathComponent(truncatedPathComponent).path!
       println("saved image data \(i), to path \(filePath)")
-      NSKeyedArchiver.archiveRootObject(album[i], toFile: filePath)
+      album[i].writeToFile(filePath, atomically: true)
     }
   }
   
@@ -55,21 +39,20 @@ class ImageManager: NSObject, NSCoding
   }
   
   class func getPhotoForURL(url: String) -> UIImage {
-    let manager = NSFileManager.defaultManager()
-    let imageURL = manager.URLsForDirectory(.DocumentDirectory, inDomains: .UserDomainMask).first as! NSURL
-    let startIndex = advance(url.endIndex, Constants.StartIndex)
-    let truncatedPathComponent = url[Range(start: startIndex, end: url.endIndex)]
-    let dirPath = NSSearchPathForDirectoriesInDomains(.DocumentDirectory, .UserDomainMask, true)[0] as! String
-    let pathArray = [dirPath, truncatedPathComponent]
-    let fileURL = NSURL.fileURLWithPathComponents(pathArray)
-    let path = imageURL.URLByAppendingPathComponent(truncatedPathComponent)
-    println("\(path)")
+    let path = imageURL(url)
     var image = UIImage()
-    if let imageData = NSData(contentsOfURL: fileURL!) {
-      let exists = manager.fileExistsAtPath("\(fileURL)")
-      println("\(exists)")
+    if let imageData = NSData(contentsOfURL: path) {
       image = UIImage(data: imageData)!
     }
     return image
+  }
+  
+  private class func imageURL(url: String) -> NSURL {
+    let startIndex = advance(url.endIndex, Constants.StartIndex)
+    let truncatedPathComponent = url[Range(start: startIndex, end: url.endIndex)]
+    let directoryPath = NSSearchPathForDirectoriesInDomains(.DocumentDirectory, .UserDomainMask, true)[0] as! String
+    let pathArray = [directoryPath, truncatedPathComponent]
+    let fileURL = NSURL.fileURLWithPathComponents(pathArray)!
+    return fileURL
   }
 }
