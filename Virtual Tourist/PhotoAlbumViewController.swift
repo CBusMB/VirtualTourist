@@ -10,46 +10,58 @@ import UIKit
 import MapKit
 import CoreData
 
-class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UICollectionViewDelegate, NSFetchedResultsControllerDelegate
+class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UICollectionViewDelegate, NSFetchedResultsControllerDelegate,ImageManagerDelegate
 {
   var selectedIndexes = [NSIndexPath]()
   var insertedIndexPaths: [NSIndexPath]?
   var deletedIndexPaths: [NSIndexPath]?
   var updatedIndexPaths: [NSIndexPath]?
+  var annotation: MKAnnotation?
+  weak var imageManager: ImageManager? {
+    didSet {
+      imageManager?.delegate = self
+    }
+  }
+  var pin: Pin? {
+    return fetchedResultsController.fetchedObjects?.first as? Pin
+  }
   
   // MARK: - Map View
   @IBOutlet weak var mapView: MKMapView! {
     didSet {
-     mapView.scrollEnabled = false
+      mapView.scrollEnabled = false
+      if let coordinate = annotation?.coordinate {
+        let center = CLLocationCoordinate2D(latitude: coordinate.latitude, longitude: coordinate.longitude)
+        let mapRegion = MKCoordinateRegion(center: center, span: MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1))
+        mapView.setRegion(mapRegion, animated: false)
+        let annotationPin = MKPointAnnotation()
+        annotationPin.coordinate = coordinate
+        mapView.addAnnotation(annotationPin)
+      }
     }
   }
   
-  func configureMapView() {
-    if let coordinate = annotation?.coordinate {
-      let center = CLLocationCoordinate2D(latitude: coordinate.latitude, longitude: coordinate.longitude)
-      let mapRegion = MKCoordinateRegion(center: center, span: MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1))
-      mapView.setRegion(mapRegion, animated: false)
-      let annotationPin = MKPointAnnotation()
-      annotationPin.coordinate = coordinate
-      mapView.addAnnotation(annotationPin)
+  @IBOutlet weak var photoAlbumCollectionView: UICollectionView! {
+    didSet {
+      photoAlbumCollectionView.delegate = self
+      photoAlbumCollectionView.dataSource = self
+      photoAlbumCollectionView.registerClass(PhotoAlbumCollectionViewCell.self, forCellWithReuseIdentifier: Constants.CellReuseIdentifier)
+      photoAlbumCollectionView.registerClass(PhotoAlbumCollectionViewCell.self, forCellWithReuseIdentifier: Constants.PlaceholderCellReuseIdentifier)
     }
   }
   
-  @IBOutlet weak var photoAlbumCollectionView: UICollectionView!
   @IBOutlet weak var refreshButton: UIBarButtonItem!
-  
-  var annotation: MKAnnotation?
   
   // MARK: - Lifecycle
   override func viewDidLoad() {
     super.viewDidLoad()
-    configureMapView()
     var error: NSError?
     fetchedResultsController.performFetch(&error) // TODO: - Handle errors
-    photoAlbumCollectionView.delegate = self
-    photoAlbumCollectionView.dataSource = self
-    photoAlbumCollectionView.registerClass(PhotoAlbumCollectionViewCell.self, forCellWithReuseIdentifier: Constants.CellReuseIdentifier)
-    photoAlbumCollectionView.registerClass(PhotoAlbumCollectionViewCell.self, forCellWithReuseIdentifier: Constants.PlaceholderCellReuseIdentifier)
+  }
+  
+  override func viewWillDisappear(animated: Bool) {
+    super.viewWillDisappear(animated)
+    imageManager = nil
   }
   
   // MARK: - Core Data
@@ -75,6 +87,11 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
     return fetchedResultsController
     }()
   
+  //MARK: - ImageManagerDelegate
+  func imageManagerDidAddImageToCache(flag: Bool, atIndex: Int) {
+    photoAlbumCollectionView.insertItemsAtIndexPaths([indexPath])
+  }
+  
   //MARK: - Collection View
   override func viewDidLayoutSubviews() {
     super.viewDidLayoutSubviews()
@@ -89,58 +106,59 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
     photoAlbumCollectionView.collectionViewLayout = layout
   }
   
-  func configureCell(cell: PhotoAlbumCollectionViewCell, atIndexPath indexPath: NSIndexPath) {
-    let pin = fetchedResultsController.fetchedObjects?.first as! Pin
-    if let index = find(selectedIndexes, indexPath) {
-      cell.alpha = 0.09
-    } else {
-      cell.alpha = 1.0
-    }
-    var image = UIImage()
-    if let pinLocation = pin.photoAlbum {
-      let imageURL = pinLocation[indexPath.item].photo
-      image = ImageManager.getPhotoForURL(imageURL!)
-      cell.imageView.image = image
-    } else {
-      
-    }
-  }
-
   func collectionView(collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-    let pin = fetchedResultsController.fetchedObjects?.first as! Pin
     var numberOfCells = 11
-    if let pinPhotoURLs = pin.photoAlbum {
-      numberOfCells = pinPhotoURLs.count
-      return numberOfCells
+    if let selectedPin = pin {
+      if let pinPhotoURLs = selectedPin.photoAlbum {
+        if pinPhotoURLs.count > 0 {
+          numberOfCells = pinPhotoURLs.count
+          return numberOfCells
+        }
+      }
     }
     return numberOfCells
   }
   
   func collectionView(collectionView: UICollectionView, cellForItemAtIndexPath indexPath: NSIndexPath) -> UICollectionViewCell {
-    let pin = fetchedResultsController.fetchedObjects?.first as! Pin
-    var cell: PhotoAlbumCollectionViewCell!
+    var cell: PhotoAlbumCollectionViewCell
 //    if let index = find(selectedIndexes, indexPath) {
 //      cell.alpha = 0.09
 //    } else {
 //      cell.alpha = 1.0
 //    }
-
-    if let photosForPin = pin.photoAlbum {
-      println("photos for pin: \(photosForPin.count)")
-      if photosForPin.count == 0 && indexPath.item == 0 {
-        cell = photoAlbumCollectionView.dequeueReusableCellWithReuseIdentifier(Constants.PlaceholderCellReuseIdentifier, forIndexPath: indexPath) as! PhotoAlbumCollectionViewCell
-        let activityView = UIActivityIndicatorView(activityIndicatorStyle: .WhiteLarge)
-        cell.imageView = nil
-        cell.backgroundView = activityView
-        cell.bringSubviewToFront(cell.backgroundView!)
-        activityView.startAnimating()
+    if let selectedPin = pin {
+      if let photoURLsForPin = selectedPin.photoAlbum {
+        if let imageURL = photoURLsForPin[indexPath.item].photo {
+          cell = configurePhotoCell(atIndexPath: indexPath)
+          println("count in cell \(imageManager?.downloadedPhotoCache.count)")
+          if imageManager?.downloadedPhotoCache.count > 0 {
+            cell.imageView.image = imageManager?.downloadedPhotoCache[indexPath.item]
+          } else {
+            cell = configurePlaceholderCell(atIndexPath: indexPath)
+          }
+        } else {
+          cell = configurePlaceholderCell(atIndexPath: indexPath)
+        }
       } else {
-        cell = photoAlbumCollectionView.dequeueReusableCellWithReuseIdentifier(Constants.CellReuseIdentifier, forIndexPath: indexPath) as! PhotoAlbumCollectionViewCell
-        let imageURL = photosForPin[indexPath.item].photo
-        let image = ImageManager.getPhotoForURL(imageURL!)
-        cell.imageView.image = image
+        cell = configurePlaceholderCell(atIndexPath: indexPath)
       }
+    } else {
+      cell = configurePhotoCell(atIndexPath: indexPath)
     }
+    return cell
+  }
+  
+  func configurePhotoCell(atIndexPath indexPath: NSIndexPath) -> PhotoAlbumCollectionViewCell {
+    return photoAlbumCollectionView.dequeueReusableCellWithReuseIdentifier(Constants.CellReuseIdentifier, forIndexPath: indexPath) as! PhotoAlbumCollectionViewCell
+  }
+  
+  func configurePlaceholderCell(atIndexPath indexPath: NSIndexPath) -> PhotoAlbumCollectionViewCell {
+    let cell = photoAlbumCollectionView.dequeueReusableCellWithReuseIdentifier(Constants.PlaceholderCellReuseIdentifier, forIndexPath: indexPath) as! PhotoAlbumCollectionViewCell
+    let activityView = UIActivityIndicatorView(activityIndicatorStyle: .WhiteLarge)
+    cell.imageView = nil
+    cell.backgroundView = activityView
+    cell.bringSubviewToFront(cell.backgroundView!)
+    activityView.startAnimating()
     return cell
   }
   
@@ -152,7 +170,7 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
       selectedIndexes.append(indexPath)
     }
     
-    configureCell(cell, atIndexPath: indexPath)
+    // configurePhotoCell(cell, atIndexPath: indexPath)
   }
   
   // MARK: - Fetched Results Controller Delegate Methods

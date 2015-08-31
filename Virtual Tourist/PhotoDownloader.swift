@@ -1,5 +1,5 @@
 //
-//  PhotoURLDownloadManager.swift
+//  PhotoDownloader.swift
 //  Virtual Tourist
 //
 //  Created by Matthew Brown on 8/14/15.
@@ -8,9 +8,9 @@
 
 import Foundation
 
-struct PhotoURLDownloadManager
+struct PhotoDownloader
 {
-  func downloadPhotoURLs(urls: [String]) -> [NSData] {
+  func downloadPhotoDataFromURLs(urls: [String]) -> [NSData] {
     var album = [NSData]()
     for url in urls {
       let imageData = NSData(contentsOfURL: NSURL(string: url)!)

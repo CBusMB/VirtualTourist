@@ -12,7 +12,7 @@
 		3272CC4B1B7B648800B3F38F /* PhotoURLRandomizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3272CC4A1B7B648800B3F38F /* PhotoURLRandomizer.swift */; };
 		3272CC4D1B7D64AA00B3F38F /* PhotoAlbumCollectionViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3272CC4C1B7D64AA00B3F38F /* PhotoAlbumCollectionViewCell.swift */; };
 		3293C2B11B7E807400B289D8 /* ImageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3293C2B01B7E807400B289D8 /* ImageManager.swift */; };
-		3293C2B31B7E884100B289D8 /* PhotoURLDownloadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3293C2B21B7E884100B289D8 /* PhotoURLDownloadManager.swift */; };
+		3293C2B31B7E884100B289D8 /* PhotoDownloader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3293C2B21B7E884100B289D8 /* PhotoDownloader.swift */; };
 		329B20EA1B702CDF00ACB972 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 329B20E91B702CDF00ACB972 /* AppDelegate.swift */; };
 		329B20ED1B702CDF00ACB972 /* Virtual_Tourist.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 329B20EB1B702CDF00ACB972 /* Virtual_Tourist.xcdatamodeld */; };
 		329B20F21B702CDF00ACB972 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 329B20F01B702CDF00ACB972 /* Main.storyboard */; };
@@ -48,7 +48,7 @@
 		3272CC4A1B7B648800B3F38F /* PhotoURLRandomizer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PhotoURLRandomizer.swift; sourceTree = "<group>"; };
 		3272CC4C1B7D64AA00B3F38F /* PhotoAlbumCollectionViewCell.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PhotoAlbumCollectionViewCell.swift; sourceTree = "<group>"; };
 		3293C2B01B7E807400B289D8 /* ImageManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ImageManager.swift; sourceTree = "<group>"; };
-		3293C2B21B7E884100B289D8 /* PhotoURLDownloadManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PhotoURLDownloadManager.swift; sourceTree = "<group>"; };
+		3293C2B21B7E884100B289D8 /* PhotoDownloader.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PhotoDownloader.swift; sourceTree = "<group>"; };
 		329B20E41B702CDF00ACB972 /* Virtual Tourist.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Virtual Tourist.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		329B20E81B702CDF00ACB972 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		329B20E91B702CDF00ACB972 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -188,7 +188,7 @@
 		329B21101B703BAE00ACB972 /* Model */ = {
 			isa = PBXGroup;
 			children = (
-				3293C2B21B7E884100B289D8 /* PhotoURLDownloadManager.swift */,
+				3293C2B21B7E884100B289D8 /* PhotoDownloader.swift */,
 				3272CC4A1B7B648800B3F38F /* PhotoURLRandomizer.swift */,
 				32AB20CF1B7987B900E6ADE0 /* BoundingBox.swift */,
 				3293C2B41B7E95E200B289D8 /* CoreData */,
@@ -379,7 +379,7 @@
 			files = (
 				329B210F1B703B9A00ACB972 /* TravelLocationsMapViewController.swift in Sources */,
 				32529F791B72CCF000CF7573 /* MapRegion.swift in Sources */,
-				3293C2B31B7E884100B289D8 /* PhotoURLDownloadManager.swift in Sources */,
+				3293C2B31B7E884100B289D8 /* PhotoDownloader.swift in Sources */,
 				32529F7B1B74C5C100CF7573 /* DeleteInstructionsView.swift in Sources */,
 				32AB20D01B7987B900E6ADE0 /* BoundingBox.swift in Sources */,
 				329B210D1B702D7C00ACB972 /* CoreDataStackManager.swift in Sources */,

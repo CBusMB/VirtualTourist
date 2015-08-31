@@ -44,6 +44,8 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
   
   var droppedPin: MKPointAnnotation?
   
+  var imageManager: ImageManager!
+  
   /// sets regionToArchive so that the last location is saved for the next time the app is opened
   func saveLastUserLocation(notification: NSNotification) {
     regionToArchive = mapView.region
@@ -72,6 +74,11 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
     var error: NSError?
     fetchedResultsController.performFetch(&error)
     addLocationPinsToMap()
+  }
+  
+  override func viewWillAppear(animated: Bool) {
+    super.viewWillAppear(animated)
+    imageManager = ImageManager()
   }
   
   // MARK: - View management
@@ -161,9 +168,10 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
       /// Filter locations to get a location item that matches the selected annotationView.  Use .first to get the location from the array.
       let selectedLocation = locations.filter
         { $0.latitude == view.annotation.coordinate.latitude && $0.longitude == view.annotation.coordinate.longitude }
-      if let pin = selectedLocation.first {
-        ImageManager.deletePhotosAtPathComponents(pin.photoAlbum!)
-        sharedContext.deleteObject(pin)
+      let pin = selectedLocation.first
+      if let urls = pin?.photoAlbum {
+        imageManager.deletePhotosForURLs(urls)
+        sharedContext.deleteObject(pin!)
         mapView.removeAnnotation(view.annotation)
         CoreDataStackManager.sharedInstance.saveContext()
       }
@@ -171,6 +179,7 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
       let storyboard = UIStoryboard(name: "Main", bundle: nil)
       let photoAlbum = storyboard.instantiateViewControllerWithIdentifier("PhotoAlbumViewController") as! PhotoAlbumViewController
       photoAlbum.annotation = view.annotation
+      photoAlbum.imageManager = imageManager
       navigationController?.pushViewController(photoAlbum, animated: true)
     }
   }
@@ -210,7 +219,9 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
     let boundingBox = BoundingBox(longitude: location.longitude as Double, latitude: location.latitude as Double)
     FlickrClient.searchByBoundingBox(boundingBox) { success, message, photoURLs in
       if success { // TODO: - add error handling
-        self.persistURLs(photoURLs!, forLocation: location)
+        dispatch_async(dispatch_get_main_queue(), {
+          self.persistURLs(photoURLs!, forLocation: location)
+        })
       } // TODO: - add alerts, remove pin if no photos exist for that location
       // remove var droppedPin from mapView in completion handler of alert view
     }
@@ -229,9 +240,9 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
   
   /// download photos for given URLs
   func downloadAndSavePhotosFromURLs(urls: [String]) {
-    let downloadManager = PhotoURLDownloadManager()
-    let album = downloadManager.downloadPhotoURLs(urls)
-    ImageManager.savePhotoAlbum(album, withFileName: urls)
+    let downloadManager = PhotoDownloader()
+    let album = downloadManager.downloadPhotoDataFromURLs(urls)
+    imageManager.savePhotoAlbum(album, withFileName: urls)
   }
   
   // MARK: - Core Data related methods and properties

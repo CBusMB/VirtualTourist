@@ -33,7 +33,7 @@ class FlickrClient
         } else {
           if let parsedJson = jsonData {
             let results = parsedJson["photos"] as! NSDictionary
-            println("\(results)")
+            // println("\(results)")
             if results["total"] as! String != "0" {
               let photoURLs = results["photo"] as! [NSDictionary]
               let urls = photoURLs.map { $0["url_m"] as! String }

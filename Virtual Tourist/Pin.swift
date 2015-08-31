@@ -28,7 +28,6 @@ class Pin: NSManagedObject
     // Dictionary
     self.latitude = latitude
     self.longitude = longitude
-    println("longitude in init \(self.longitude)")
   }
 
 
