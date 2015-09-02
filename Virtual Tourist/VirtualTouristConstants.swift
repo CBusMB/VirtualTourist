@@ -5,6 +5,7 @@
 //  Created by Matthew Brown on 8/3/15.
 //  Copyright (c) 2015 Crest Technologies. All rights reserved.
 //
+import Foundation
 
 struct Keys {
   static let Latitude = "latitude"
@@ -39,4 +40,5 @@ struct Constants {
   static let StartIndex = -16
   static let CellReuseIdentifier = "PhotoCell"
   static let PlaceholderCellReuseIdentifier = "PlaceholderCell"
+  static let PhotoDownloadQOS = Int(QOS_CLASS_USER_INTERACTIVE.value)
 }

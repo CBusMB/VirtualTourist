@@ -100,7 +100,12 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
   func animateView(view viewToAnimate: UIView, forEditingState editing: Bool) {
     if editing {
       view.addSubview(viewToAnimate)
-      UIView.animateWithDuration(0.55) { viewToAnimate.frame = self.viewToAnimateRect(viewHeightForOffset: viewToAnimate.frame.height) }
+      UIView.animateWithDuration(0.55, delay: 0.0,
+                      usingSpringWithDamping: 0.40,
+                       initialSpringVelocity: 0.25,
+                                     options: .CurveEaseIn,
+                                  animations: { viewToAnimate.frame = self.viewToAnimateRect(viewHeightForOffset: viewToAnimate.frame.height) },
+                                  completion: nil)
     } else {
       UIView.animateWithDuration(0.55,
         animations: { viewToAnimate.frame = self.viewToAnimateRect(viewHeightForOffset: 0.0) },
@@ -160,15 +165,15 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
   }
   
   func mapView(mapView: MKMapView!, didSelectAnnotationView view: MKAnnotationView!) {
+    var error: NSError?
+    /// perform a fetch so that we can be sure to get Pins that were just added
+    fetchedResultsController.performFetch(&error)
+    let locations = fetchedResultsController.fetchedObjects as! [Pin]
+    /// Filter locations to get a location item that matches the selected annotationView.  Use .first to get the location from the array.
+    let selectedLocation = locations.filter
+      { $0.latitude == view.annotation.coordinate.latitude && $0.longitude == view.annotation.coordinate.longitude }
+    let pin = selectedLocation.first
     if editing {
-      var error: NSError?
-      /// perform a fetch so that we can be sure to get Pins that were just added
-      fetchedResultsController.performFetch(&error)
-      let locations = fetchedResultsController.fetchedObjects as! [Pin]
-      /// Filter locations to get a location item that matches the selected annotationView.  Use .first to get the location from the array.
-      let selectedLocation = locations.filter
-        { $0.latitude == view.annotation.coordinate.latitude && $0.longitude == view.annotation.coordinate.longitude }
-      let pin = selectedLocation.first
       if let urls = pin?.photoAlbum {
         imageManager.deletePhotosForURLs(urls)
         sharedContext.deleteObject(pin!)
@@ -176,11 +181,16 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
         CoreDataStackManager.sharedInstance.saveContext()
       }
     } else {
-      let storyboard = UIStoryboard(name: "Main", bundle: nil)
-      let photoAlbum = storyboard.instantiateViewControllerWithIdentifier("PhotoAlbumViewController") as! PhotoAlbumViewController
-      photoAlbum.annotation = view.annotation
-      photoAlbum.imageManager = imageManager
-      navigationController?.pushViewController(photoAlbum, animated: true)
+      if imageManager.downloadingNewImages == false {
+        imageManager.addPersistedPhotosToCache(pin!.photoAlbum!)
+      }
+      dispatch_async(dispatch_get_main_queue(), {
+        let storyboard = UIStoryboard(name: "Main", bundle: nil)
+        let photoAlbum = storyboard.instantiateViewControllerWithIdentifier("PhotoAlbumViewController") as! PhotoAlbumViewController
+        photoAlbum.annotation = view.annotation
+        photoAlbum.imageManager = self.imageManager
+        self.navigationController?.pushViewController(photoAlbum, animated: true)
+      })
     }
   }
   
@@ -219,29 +229,22 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
     let boundingBox = BoundingBox(longitude: location.longitude as Double, latitude: location.latitude as Double)
     FlickrClient.searchByBoundingBox(boundingBox) { success, message, photoURLs in
       if success { // TODO: - add error handling
-        dispatch_async(dispatch_get_main_queue(), {
+        dispatch_async(dispatch_get_main_queue()) {
           self.persistURLs(photoURLs!, forLocation: location)
-        })
+        }
       } // TODO: - add alerts, remove pin if no photos exist for that location
       // remove var droppedPin from mapView in completion handler of alert view
     }
   }
   
-  /// Select 21 random URLs, add to CoreData context
+  /// Select 21 random URLs, add the to CoreData context, initiaite downloading and saving of images
   func persistURLs(urls: [String], forLocation location: Pin) {
-    let photoRandomizer = PhotoURLRandomizer()
-    let photos = photoRandomizer.randomURLs(urls)
+    let photos = imageManager.randomURLs(urls)
     for photo in photos {
       let photoURL = Photo(photoURL: photo, location: location, photoAlbumCount: photos.count, context: sharedContext)
     }
-    downloadAndSavePhotosFromURLs(photos)
     CoreDataStackManager.sharedInstance.saveContext()
-  }
-  
-  /// download photos for given URLs
-  func downloadAndSavePhotosFromURLs(urls: [String]) {
-    let downloadManager = PhotoDownloader()
-    let album = downloadManager.downloadPhotoDataFromURLs(urls)
+    let album = imageManager.downloadPhotoDataFromURLs(urls)
     imageManager.savePhotoAlbum(album, withFileName: urls)
   }
   

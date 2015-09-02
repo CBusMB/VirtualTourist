@@ -8,7 +8,6 @@
 
 import UIKit
 
-
 protocol ImageManagerDelegate: class
 {
   func imageManagerDidAddImageToCache(flag: Bool, atIndex index: Int)
@@ -16,6 +15,34 @@ protocol ImageManagerDelegate: class
 
 class ImageManager
 {
+  func downloadPhotoDataFromURLs(urls: [String]) -> [NSData] {
+    downloadingNewImages = true
+    var album = [NSData]()
+    dispatch_async(dispatch_get_global_queue(Constants.PhotoDownloadQOS, 0)) {
+      for url in urls {
+        let imageData = NSData(contentsOfURL: NSURL(string: url)!)
+        album.append(imageData!)
+      }
+    }
+    return album
+  }
+  
+  func randomURLs(urls: [String]) -> [String] {
+    var urlArray = [String]()
+    var defaultCount = 21
+    if urls.count < 21 {
+      defaultCount = urls.count
+    }
+    for i in 0..<defaultCount {
+      let randomIndex = Int(arc4random_uniform(UInt32(urls.count)))
+      let randomURL = urls[randomIndex]
+      urlArray.append(randomURL)
+    }
+    return urlArray
+  }
+  
+  var downloadingNewImages: Bool? = false
+  
   var downloadedPhotoCache = [UIImage]()
   
   weak var delegate: ImageManagerDelegate?
@@ -29,7 +56,7 @@ class ImageManager
       let filePath = url.URLByAppendingPathComponent(truncatedPathComponent).path!
       album[i].writeToFile(filePath, atomically: true)
       println("saved file to URL: \(filePath)")
-      addPhotoToCacheFromURL(filePath)
+      addDownloadedPhotoToCacheFromURL(filePath)
     }
     println("count in save album: \(downloadedPhotoCache.count)")
   }
@@ -48,7 +75,7 @@ class ImageManager
   }
   
   ///:param: url - The full URL path as a String
-  func addPhotoToCacheFromURL(url: String) {
+  func addDownloadedPhotoToCacheFromURL(url: String) {
     println("called addPhotoToCacheFromURL")
     let path = imageURL(url)
     var image: UIImage?
@@ -58,6 +85,23 @@ class ImageManager
       delegate?.imageManagerDidAddImageToCache(true, atIndex: downloadedPhotoCache.count - 1)
       println("count in add to cache: \(downloadedPhotoCache.count)")
     }
+  }
+  
+  func addPersistedPhotosToCache(urls: [Photo]) {
+    println("called addPersistedPhotosToCache")
+    for url in urls {
+      if let photoURL = url.photo {
+        let path = imageURL(photoURL)
+        var image: UIImage?
+        if let imageData = NSData(contentsOfURL: path) {
+          image = UIImage(data: imageData)!
+          downloadedPhotoCache.append(image!)
+          delegate?.imageManagerDidAddImageToCache(true, atIndex: downloadedPhotoCache.count - 1)
+          println("count in add to cache: \(downloadedPhotoCache.count)")
+        }
+      }
+    }
+    downloadingNewImages = false
   }
   
   private func imageURL(url: String) -> NSURL {

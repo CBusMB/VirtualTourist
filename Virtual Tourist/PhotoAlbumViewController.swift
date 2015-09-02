@@ -22,8 +22,9 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
       imageManager?.delegate = self
     }
   }
-  var pin: Pin? {
-    return fetchedResultsController.fetchedObjects?.first as? Pin
+  var photoURLs: [Photo]? {
+    let pin = fetchedResultsController.fetchedObjects?.first as! Pin
+    return pin.photoAlbum
   }
   
   // MARK: - Map View
@@ -59,11 +60,6 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
     fetchedResultsController.performFetch(&error) // TODO: - Handle errors
   }
   
-  override func viewWillDisappear(animated: Bool) {
-    super.viewWillDisappear(animated)
-    imageManager = nil
-  }
-  
   // MARK: - Core Data
   var sharedContext: NSManagedObjectContext {
     return CoreDataStackManager.sharedInstance.managedObjectContext!
@@ -88,7 +84,8 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
     }()
   
   //MARK: - ImageManagerDelegate
-  func imageManagerDidAddImageToCache(flag: Bool, atIndex: Int) {
+  func imageManagerDidAddImageToCache(flag: Bool, atIndex index: Int) {
+    let indexPath = NSIndexPath(forItem: index, inSection: photoAlbumCollectionView.numberOfSections())
     photoAlbumCollectionView.insertItemsAtIndexPaths([indexPath])
   }
   
@@ -108,13 +105,9 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
   
   func collectionView(collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
     var numberOfCells = 11
-    if let selectedPin = pin {
-      if let pinPhotoURLs = selectedPin.photoAlbum {
-        if pinPhotoURLs.count > 0 {
-          numberOfCells = pinPhotoURLs.count
-          return numberOfCells
-        }
-      }
+    if photoURLs!.count > 0 {
+      numberOfCells = photoURLs!.count
+      return numberOfCells
     }
     return numberOfCells
   }
@@ -126,24 +119,11 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
 //    } else {
 //      cell.alpha = 1.0
 //    }
-    if let selectedPin = pin {
-      if let photoURLsForPin = selectedPin.photoAlbum {
-        if let imageURL = photoURLsForPin[indexPath.item].photo {
-          cell = configurePhotoCell(atIndexPath: indexPath)
-          println("count in cell \(imageManager?.downloadedPhotoCache.count)")
-          if imageManager?.downloadedPhotoCache.count > 0 {
-            cell.imageView.image = imageManager?.downloadedPhotoCache[indexPath.item]
-          } else {
-            cell = configurePlaceholderCell(atIndexPath: indexPath)
-          }
-        } else {
-          cell = configurePlaceholderCell(atIndexPath: indexPath)
-        }
-      } else {
-        cell = configurePlaceholderCell(atIndexPath: indexPath)
-      }
-    } else {
+    if imageManager?.downloadingNewImages == false {
       cell = configurePhotoCell(atIndexPath: indexPath)
+      cell.imageView.image = imageManager?.downloadedPhotoCache[indexPath.item]
+    } else {
+      cell = configurePlaceholderCell(atIndexPath: indexPath)
     }
     return cell
   }
