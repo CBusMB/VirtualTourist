@@ -79,6 +79,7 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
   override func viewWillAppear(animated: Bool) {
     super.viewWillAppear(animated)
     imageManager = ImageManager()
+    println("view will appear")
   }
   
   // MARK: - View management
@@ -187,7 +188,7 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
       dispatch_async(dispatch_get_main_queue(), {
         let storyboard = UIStoryboard(name: "Main", bundle: nil)
         let photoAlbum = storyboard.instantiateViewControllerWithIdentifier("PhotoAlbumViewController") as! PhotoAlbumViewController
-        photoAlbum.annotation = view.annotation
+        photoAlbum.pin = pin
         photoAlbum.imageManager = self.imageManager
         self.navigationController?.pushViewController(photoAlbum, animated: true)
       })
@@ -240,12 +241,14 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
   /// Select 21 random URLs, add the to CoreData context, initiaite downloading and saving of images
   func persistURLs(urls: [String], forLocation location: Pin) {
     let photos = imageManager.randomURLs(urls)
-    for photo in photos {
-      let photoURL = Photo(photoURL: photo, location: location, photoAlbumCount: photos.count, context: sharedContext)
+    imageManager.savePhotoURLsToCoreData(photos, forLocation: location)
+    imageManager.downloadPhotoDataFromURLs(photos) { [weak self] success, album in
+      if success {
+        println("completion handler")
+        self?.imageManager.savePhotoAlbum(album, withFileName: photos)
+      }
     }
-    CoreDataStackManager.sharedInstance.saveContext()
-    let album = imageManager.downloadPhotoDataFromURLs(urls)
-    imageManager.savePhotoAlbum(album, withFileName: urls)
+    
   }
   
   // MARK: - Core Data related methods and properties

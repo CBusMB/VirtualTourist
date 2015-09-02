@@ -10,6 +10,7 @@ import Foundation
 class FlickrClient
 {
   class func searchByBoundingBox(boundingBox: BoundingBox, completionHandler: (success: Bool, message: String?, flickrPhotoURLs: [String]?) -> Void) {
+    println("searchByBoundingBox")
     let methodArguments = [
       Flickr.MethodKey : Flickr.MethodValue,
       Flickr.APIKey : Flickr.APIValue,

@@ -7,27 +7,57 @@
 //
 
 import UIKit
+import CoreData
 
 protocol ImageManagerDelegate: class
 {
   func imageManagerDidAddImageToCache(flag: Bool, atIndex index: Int)
+  func imageManagerDidPersistURLs(flag: Bool)
 }
 
 class ImageManager
 {
-  func downloadPhotoDataFromURLs(urls: [String]) -> [NSData] {
+  var downloadingNewImages: Bool? = false
+  
+  var downloadingPhotoURLs: Bool? = false
+  
+  var downloadedPhotoCache = [UIImage]()
+  
+  weak var delegate: ImageManagerDelegate?
+  
+  func savePhotoURLsToCoreData(urls: [String], forLocation location: Pin) {
+    println("savePhotoURLsToCoreData")
+    for url in urls {
+      let photoURL = Photo(photoURL: url, location: location, photoAlbumCount: urls.count, context: sharedContext)
+    }
+    dispatch_async(dispatch_get_main_queue()) {
+      CoreDataStackManager.sharedInstance.saveContext()
+      self.delegate?.imageManagerDidPersistURLs(true)
+      self.downloadingPhotoURLs = true
+      println("\(self.downloadingPhotoURLs)")
+    }
+  }
+  
+  func downloadPhotoDataFromURLs(urls: [String], completionHandler: (success: Bool, photoData: [NSData]) -> Void) {
+    println("downloadPhotoDataFromURLs")
+    println("# of urls = \(urls.count)")
     downloadingNewImages = true
     var album = [NSData]()
     dispatch_async(dispatch_get_global_queue(Constants.PhotoDownloadQOS, 0)) {
       for url in urls {
+        println("\(url)")
         let imageData = NSData(contentsOfURL: NSURL(string: url)!)
         album.append(imageData!)
       }
+      dispatch_async(dispatch_get_main_queue()) {
+        println("main queue for completion handler")
+        completionHandler(success: true, photoData: album)
+      }
     }
-    return album
   }
   
   func randomURLs(urls: [String]) -> [String] {
+    println("randomURLs")
     var urlArray = [String]()
     var defaultCount = 21
     if urls.count < 21 {
@@ -38,16 +68,13 @@ class ImageManager
       let randomURL = urls[randomIndex]
       urlArray.append(randomURL)
     }
+    println("randomURLs count = \(urlArray.count)")
     return urlArray
   }
   
-  var downloadingNewImages: Bool? = false
-  
-  var downloadedPhotoCache = [UIImage]()
-  
-  weak var delegate: ImageManagerDelegate?
-  
   func savePhotoAlbum(album: [NSData], withFileName fileName: [String]) {
+    println("savePhotoAlbum")
+    println("\(album.count)")
     let manager = NSFileManager.defaultManager()
     let url = manager.URLsForDirectory(.DocumentDirectory, inDomains: .UserDomainMask).first as! NSURL
     for i in 0..<album.count {
@@ -115,5 +142,10 @@ class ImageManager
   private func imageFileName(path: String) -> String {
     let startIndex = advance(path.endIndex, Constants.StartIndex)
     return path[Range(start: startIndex, end: path.endIndex)]
+  }
+  
+  //MARK: - Core Data
+  var sharedContext: NSManagedObjectContext {
+    return CoreDataStackManager.sharedInstance.managedObjectContext!
   }
 }

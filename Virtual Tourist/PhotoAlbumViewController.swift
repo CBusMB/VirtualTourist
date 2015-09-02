@@ -16,22 +16,24 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
   var insertedIndexPaths: [NSIndexPath]?
   var deletedIndexPaths: [NSIndexPath]?
   var updatedIndexPaths: [NSIndexPath]?
-  var annotation: MKAnnotation?
+  var selectedLocationCoordinate: CLLocationCoordinate2D?
   weak var imageManager: ImageManager? {
     didSet {
       imageManager?.delegate = self
     }
   }
-  var photoURLs: [Photo]? {
-    let pin = fetchedResultsController.fetchedObjects?.first as! Pin
-    return pin.photoAlbum
+  
+  var pin: Pin? {
+    didSet {
+      selectedLocationCoordinate = CLLocationCoordinate2DMake(pin?.latitude as! Double, pin?.longitude as! Double)
+    }
   }
   
   // MARK: - Map View
   @IBOutlet weak var mapView: MKMapView! {
     didSet {
       mapView.scrollEnabled = false
-      if let coordinate = annotation?.coordinate {
+      if let coordinate = selectedLocationCoordinate {
         let center = CLLocationCoordinate2D(latitude: coordinate.latitude, longitude: coordinate.longitude)
         let mapRegion = MKCoordinateRegion(center: center, span: MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1))
         mapView.setRegion(mapRegion, animated: false)
@@ -66,13 +68,11 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
   }
   
   lazy var fetchedResultsController: NSFetchedResultsController = {
-    let locationLatitude: NSNumber = self.annotation!.coordinate.latitude
-    let locationLongitude: NSNumber = self.annotation!.coordinate.longitude
-    let fetchRequest = NSFetchRequest(entityName: "Pin")
+//    let locationLatitude: NSNumber = self.annotation!.coordinate.latitude
+//    let locationLongitude: NSNumber = self.annotation!.coordinate.longitude
+    let fetchRequest = NSFetchRequest(entityName: "Photo")
     fetchRequest.sortDescriptors = []
-    fetchRequest.predicate = NSCompoundPredicate(type: .AndPredicateType,
-                                        subpredicates: [NSPredicate(format: "%K == %@", "latitude", locationLatitude),
-                                                        NSPredicate(format: "%K == %@", "longitude", locationLongitude)])
+    fetchRequest.predicate = NSPredicate(format: "location == %@", self.pin!)
     
     let fetchedResultsController = NSFetchedResultsController(fetchRequest: fetchRequest,
                                                       managedObjectContext: self.sharedContext,
@@ -87,6 +87,12 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
   func imageManagerDidAddImageToCache(flag: Bool, atIndex index: Int) {
     let indexPath = NSIndexPath(forItem: index, inSection: photoAlbumCollectionView.numberOfSections())
     photoAlbumCollectionView.insertItemsAtIndexPaths([indexPath])
+  }
+  
+  func imageManagerDidPersistURLs(flag: Bool) {
+    if flag {
+      
+    }
   }
   
   //MARK: - Collection View
@@ -104,12 +110,13 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
   }
   
   func collectionView(collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-    var numberOfCells = 11
-    if photoURLs!.count > 0 {
-      numberOfCells = photoURLs!.count
-      return numberOfCells
-    }
-    return numberOfCells
+    let sectionInfo = fetchedResultsController.sections![section] as! NSFetchedResultsSectionInfo
+    let defaultNumberOfCells = 11
+//    if photoURLs!.count > 0 {
+//      numberOfCells = photoURLs!.count
+//      return numberOfCells
+//    }
+    return sectionInfo.numberOfObjects
   }
   
   func collectionView(collectionView: UICollectionView, cellForItemAtIndexPath indexPath: NSIndexPath) -> UICollectionViewCell {
