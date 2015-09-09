@@ -48,7 +48,7 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
     didSet {
       photoAlbumCollectionView.delegate = self
       photoAlbumCollectionView.dataSource = self
-      photoAlbumCollectionView.registerClass(PhotoAlbumCollectionViewCell.self, forCellWithReuseIdentifier: Constants.CellReuseIdentifier)
+      // photoAlbumCollectionView.registerClass(PhotoAlbumCollectionViewCell.self, forCellWithReuseIdentifier: Constants.CellReuseIdentifier)
       photoAlbumCollectionView.registerClass(PhotoAlbumCollectionViewCell.self, forCellWithReuseIdentifier: Constants.PlaceholderCellReuseIdentifier)
     }
   }
@@ -120,27 +120,53 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
   }
   
   func collectionView(collectionView: UICollectionView, cellForItemAtIndexPath indexPath: NSIndexPath) -> UICollectionViewCell {
-    var cell: PhotoAlbumCollectionViewCell
+    var cell = photoAlbumCollectionView.dequeueReusableCellWithReuseIdentifier(Constants.CellReuseIdentifier, forIndexPath: indexPath) as!PhotoAlbumCollectionViewCell
+    if imageManager?.downloadTasks.count > 1 {
+      cell.downloadTask = imageManager!.downloadTasks[indexPath.item]
+    }
+    if let taskState = cell.downloadTask?.state {
+      switch taskState {
+      case .Running:
+        cell = configurePlaceholderCell(cell)
+      case .Suspended:
+        cell = configurePlaceholderCell(cell)
+      case .Canceling:
+        cell = configurePlaceholderCell(cell)
+      case .Completed:
+        println("index path is \(indexPath.item), cache count is \(imageManager!.photoCache.count)")
+        if let cachedImage = imageManager?.photoCache[indexPath.item] {
+          cell.imageView.image = cachedImage
+        } else {
+          cell = configurePlaceholderCell(cell)
+        }
+      default:
+        cell = configurePlaceholderCell(cell)
+      }
+      println("task state: \(taskState)")
+    } else {
+      println("index path is \(indexPath.item), cache count is \(imageManager!.photoCache.count)")
+      if imageManager?.photoCache.count >= indexPath.item {
+        if let cachedImage = imageManager?.photoCache[indexPath.item] {
+          cell.imageView.image = cachedImage
+        }
+      } else {
+        cell = configurePlaceholderCell(cell)
+      }
+    }
+    
 //    if let index = find(selectedIndexes, indexPath) {
 //      cell.alpha = 0.09
 //    } else {
 //      cell.alpha = 1.0
 //    }
-    if imageManager?.downloadingNewImages == false {
-      cell = configurePhotoCell(atIndexPath: indexPath)
-      cell.imageView.image = imageManager?.downloadedPhotoCache[indexPath.item]
-    } else {
-      cell = configurePlaceholderCell(atIndexPath: indexPath)
-    }
     return cell
   }
   
-  func configurePhotoCell(atIndexPath indexPath: NSIndexPath) -> PhotoAlbumCollectionViewCell {
-    return photoAlbumCollectionView.dequeueReusableCellWithReuseIdentifier(Constants.CellReuseIdentifier, forIndexPath: indexPath) as! PhotoAlbumCollectionViewCell
+  func configurePhotoCell(cell: PhotoAlbumCollectionViewCell) -> PhotoAlbumCollectionViewCell {
+    return cell
   }
   
-  func configurePlaceholderCell(atIndexPath indexPath: NSIndexPath) -> PhotoAlbumCollectionViewCell {
-    let cell = photoAlbumCollectionView.dequeueReusableCellWithReuseIdentifier(Constants.PlaceholderCellReuseIdentifier, forIndexPath: indexPath) as! PhotoAlbumCollectionViewCell
+  func configurePlaceholderCell(cell: PhotoAlbumCollectionViewCell) -> PhotoAlbumCollectionViewCell {
     let activityView = UIActivityIndicatorView(activityIndicatorStyle: .WhiteLarge)
     cell.imageView = nil
     cell.backgroundView = activityView

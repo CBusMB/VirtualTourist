@@ -22,4 +22,5 @@ class PhotoAlbumCollectionViewCell: UICollectionViewCell
   }
   
   var imageView: UIImageView!
+  var downloadTask: NSURLSessionDownloadTask?
 }

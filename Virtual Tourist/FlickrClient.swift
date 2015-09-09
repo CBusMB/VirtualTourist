@@ -5,12 +5,11 @@
 //  Created by Matthew Brown on 8/9/15.
 //  Copyright (c) 2015 Crest Technologies. All rights reserved.
 //
-import Foundation
+import UIKit
 
 class FlickrClient
 {
   class func searchByBoundingBox(boundingBox: BoundingBox, completionHandler: (success: Bool, message: String?, flickrPhotoURLs: [String]?) -> Void) {
-    println("searchByBoundingBox")
     let methodArguments = [
       Flickr.MethodKey : Flickr.MethodValue,
       Flickr.APIKey : Flickr.APIValue,
@@ -48,6 +47,21 @@ class FlickrClient
     }
     task.resume()
   }
+  
+  class func downloadImageAtURL(url: String, downloadComplete: (imageData: NSData?) -> Void) -> NSURLSessionDownloadTask {
+    let session = NSURLSession.sharedSession()
+    let downloadTask = session.downloadTaskWithURL(NSURL(string: url)!) { (location, _, error) -> Void in
+      if let downloadedImageData = NSData(contentsOfURL: location) {
+        downloadComplete(imageData: downloadedImageData)
+      } else {
+        // TODO: - handle error
+        println("error in downloadTaskWithURL completion handler")
+      }
+    }
+    downloadTask.resume()
+    return downloadTask
+  }
+    
   
   // from Udacity networking course
   private class func escapedParameters(parameters: [String : AnyObject]) -> String {

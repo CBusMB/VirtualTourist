@@ -63,7 +63,7 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
     super.viewDidLoad()
     navigationItem.rightBarButtonItem = editButtonItem()
     
-    /// get the last map region from the file system
+    // get the last map region from the file system
     if let savedRegion = NSKeyedUnarchiver.unarchiveObjectWithFile(regionFilePath) as? MapRegion {
       regionToUnarchive = savedRegion
     }
@@ -78,8 +78,8 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
   
   override func viewWillAppear(animated: Bool) {
     super.viewWillAppear(animated)
+    // reset the ImageManager to clear the cache and set flags to default
     imageManager = ImageManager()
-    println("view will appear")
   }
   
   // MARK: - View management
@@ -167,10 +167,10 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
   
   func mapView(mapView: MKMapView!, didSelectAnnotationView view: MKAnnotationView!) {
     var error: NSError?
-    /// perform a fetch so that we can be sure to get Pins that were just added
+    // perform a fetch so that we can be sure to get Pins that were just added
     fetchedResultsController.performFetch(&error)
     let locations = fetchedResultsController.fetchedObjects as! [Pin]
-    /// Filter locations to get a location item that matches the selected annotationView.  Use .first to get the location from the array.
+    // Filter locations to get a location item that matches the selected annotationView.  Use .first to get the location from the array.
     let selectedLocation = locations.filter
       { $0.latitude == view.annotation.coordinate.latitude && $0.longitude == view.annotation.coordinate.longitude }
     let pin = selectedLocation.first
@@ -182,16 +182,18 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
         CoreDataStackManager.sharedInstance.saveContext()
       }
     } else {
-      if imageManager.downloadingNewImages == false {
+      // for debug ONLY
+      //imageManager.imageDownloadComplete = true
+      if imageManager.imageDownloadComplete == true {
         imageManager.addPersistedPhotosToCache(pin!.photoAlbum!)
       }
-      dispatch_async(dispatch_get_main_queue(), {
+      dispatch_async(dispatch_get_main_queue()) {
         let storyboard = UIStoryboard(name: "Main", bundle: nil)
-        let photoAlbum = storyboard.instantiateViewControllerWithIdentifier("PhotoAlbumViewController") as! PhotoAlbumViewController
-        photoAlbum.pin = pin
-        photoAlbum.imageManager = self.imageManager
-        self.navigationController?.pushViewController(photoAlbum, animated: true)
-      })
+        let photoAlbumViewController = storyboard.instantiateViewControllerWithIdentifier("PhotoAlbumViewController") as! PhotoAlbumViewController
+        photoAlbumViewController.pin = pin
+        photoAlbumViewController.imageManager = self.imageManager
+        self.navigationController?.pushViewController(photoAlbumViewController, animated: true)
+      }
     }
   }
   
@@ -215,6 +217,7 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
     if recognizer.state != .Began {
       return
     }
+    // imageManager.downloadingNewImages = true
     let touchPoint = recognizer.locationInView(mapView)
     let touchCoordinate = mapView.convertPoint(touchPoint, toCoordinateFromView: mapView)
     droppedPin = MKPointAnnotation()
@@ -231,24 +234,19 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
     FlickrClient.searchByBoundingBox(boundingBox) { success, message, photoURLs in
       if success { // TODO: - add error handling
         dispatch_async(dispatch_get_main_queue()) {
-          self.persistURLs(photoURLs!, forLocation: location)
+          self.persistFlickrURLs(photoURLs!, forLocation: location)
         }
       } // TODO: - add alerts, remove pin if no photos exist for that location
       // remove var droppedPin from mapView in completion handler of alert view
     }
   }
   
-  /// Select 21 random URLs, add the to CoreData context, initiaite downloading and saving of images
-  func persistURLs(urls: [String], forLocation location: Pin) {
+  /// Select 21 random URLs, add them to CoreData context, initiaite downloading and saving of images
+  ///:param: urls - Flickr URLS
+  func persistFlickrURLs(urls: [String], forLocation location: Pin) {
     let photos = imageManager.randomURLs(urls)
     imageManager.savePhotoURLsToCoreData(photos, forLocation: location)
-    imageManager.downloadPhotoDataFromURLs(photos) { [weak self] success, album in
-      if success {
-        println("completion handler")
-        self?.imageManager.savePhotoAlbum(album, withFileName: photos)
-      }
-    }
-    
+    imageManager.downloadPhotoAlbumImageDataFromURLs(photos)
   }
   
   // MARK: - Core Data related methods and properties
