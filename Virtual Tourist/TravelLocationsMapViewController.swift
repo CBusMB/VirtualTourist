@@ -76,11 +76,11 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
     addLocationPinsToMap()
   }
   
-  override func viewWillAppear(animated: Bool) {
-    super.viewWillAppear(animated)
-    // reset the ImageManager to clear the cache and set flags to default
-    imageManager = ImageManager()
-  }
+//  override func viewWillAppear(animated: Bool) {
+//    super.viewWillAppear(animated)
+//    // reset the ImageManager to clear the cache and set flags to default
+//    imageManager = ImageManager()
+//  }
   
   // MARK: - View management
   
@@ -183,7 +183,7 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
       }
     } else {
       // for debug ONLY
-      //imageManager.imageDownloadComplete = true
+      // imageManager.imageDownloadComplete = true
       if imageManager.imageDownloadComplete == true {
         imageManager.addPersistedPhotosToCache(pin!.photoAlbum!)
       }

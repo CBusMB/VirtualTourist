@@ -186,9 +186,9 @@
 			children = (
 				32AB20CF1B7987B900E6ADE0 /* BoundingBox.swift */,
 				3293C2B41B7E95E200B289D8 /* CoreData */,
-				329B21181B7054E800ACB972 /* VirtualTouristConstants.swift */,
-				32529F781B72CCF000CF7573 /* MapRegion.swift */,
 				3293C2B01B7E807400B289D8 /* ImageManager.swift */,
+				32529F781B72CCF000CF7573 /* MapRegion.swift */,
+				329B21181B7054E800ACB972 /* VirtualTouristConstants.swift */,
 			);
 			name = Model;
 			sourceTree = "<group>";

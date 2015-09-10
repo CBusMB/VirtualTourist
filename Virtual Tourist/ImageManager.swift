@@ -48,15 +48,21 @@ class ImageManager
           dispatch_async(dispatch_get_main_queue()) {
             self.savePhotoToFileSystemAsData(dataToWrite, withExternalURL: url)
             println("\(self.imageURL(url))")
-            self.addDownloadedPhotoToCacheFromURL("\(self.imageURL(url))")
-            println("added photo to cache from downloadPhotoAlbumImageDataFromURLs")
+//            self.addDownloadedPhotoToCacheFromURL("\(self.imageURL(url))")
+//            println("added photo to cache from downloadPhotoAlbumImageDataFromURLs")
           }
         }
       }
       downloadTasks.append(downloadTask)
       println("download tasks: \(downloadTasks.count)")
     }
-    imageDownloadComplete = true
+    // imageDownloadComplete = true
+  }
+  
+  func cancelDownloadTasks() {
+    for downloadTask in downloadTasks {
+      downloadTask.cancel()
+    }
   }
   
   func randomURLs(urls: [String]) -> [String] {
@@ -80,6 +86,7 @@ class ImageManager
     let filePath = fileSystemURL.URLByAppendingPathComponent(truncatedPathComponent).path!
     data.writeToFile(filePath, atomically: true)
     println("savePhotoToFileSystemAsData")
+    addDownloadedPhotoToCacheFromURL(filePath)
   }
   
   func deletePhotosForURLs(urls: [Photo]) {
@@ -117,18 +124,25 @@ class ImageManager
   */
   func addPersistedPhotosToCache(urls: [Photo]) {
     println("addPersistedPhotosToCache called")
+    resetCacheAndTasks()
     for url in urls {
       if let photoURL = url.photo {
         let path = imageURL(photoURL)
-        if let image = UIImage(data: NSData(contentsOfFile: "\(path)")!) {
-          let imageWithPath = ["\(path)" : image]
-          photoCache.append(image)
+        if let imageData = NSData(contentsOfFile: "\(path)") {
+          let image = UIImage(data: imageData)
+          // let imageWithPath = ["\(path)" : image]
+          photoCache.append(image!)
           delegate?.imageManagerDidAddImageToCache(true, atIndex: photoCache.count - 1)
           println("count in add to cache: \(photoCache.count)")
         }
       }
     }
     // downloadingNewImages = false
+  }
+  
+  func resetCacheAndTasks() {
+    photoCache.removeAll(keepCapacity: false)
+    downloadTasks.removeAll(keepCapacity: false)
   }
   
   private func imageURL(url: String) -> NSURL {
