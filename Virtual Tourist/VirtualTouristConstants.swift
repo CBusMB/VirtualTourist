@@ -40,5 +40,5 @@ struct Constants {
   static let StartIndex = -16
   static let CellReuseIdentifier = "PhotoCell"
   static let PlaceholderCellReuseIdentifier = "PlaceholderCell"
-  static let PhotoDownloadQOS = Int(QOS_CLASS_USER_INTERACTIVE.value)
+  static let PhotoDownloadQOS = Int(QOS_CLASS_USER_INTERACTIVE.rawValue)
 }

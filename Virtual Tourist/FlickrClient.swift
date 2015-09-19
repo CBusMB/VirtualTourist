@@ -24,24 +24,22 @@ class FlickrClient
     let session = NSURLSession.sharedSession()
     let task = session.dataTaskWithRequest(request) { data, response, error in
       if error != nil {
-        completionHandler(success: false, message: nil, flickrPhotoURLs: nil)
+        completionHandler(success: false, message: error?.localizedDescription, flickrPhotoURLs: nil)
       } else {
-        var jsonError: NSError?
-        let jsonData = NSJSONSerialization.JSONObjectWithData(data, options: .MutableLeaves, error: &jsonError) as? NSDictionary
-        if jsonError != nil {
-          completionHandler(success: false, message: nil, flickrPhotoURLs: nil)
-        } else {
+        do {
+          let jsonData = try NSJSONSerialization.JSONObjectWithData(data!, options: .MutableLeaves) as? NSDictionary
           if let parsedJson = jsonData {
             let results = parsedJson["photos"] as! NSDictionary
-            // println("\(results)")
             if results["total"] as! String != "0" {
               let photoURLs = results["photo"] as! [NSDictionary]
               let urls = photoURLs.map { $0["url_m"] as! String }
               completionHandler(success: true, message: nil, flickrPhotoURLs: urls)
             } else {
-              completionHandler(success: false, message: nil, flickrPhotoURLs: nil)
+              completionHandler(success: false, message: error?.localizedDescription, flickrPhotoURLs: nil)
             }
-          } // TODO: - Error handling
+          }
+        } catch let jsonError as NSError {
+            completionHandler(success: false, message: jsonError.localizedDescription, flickrPhotoURLs: nil)
         }
       }
     }
@@ -51,11 +49,11 @@ class FlickrClient
   class func downloadImageAtURL(url: String, downloadComplete: (imageData: NSData?) -> Void) -> NSURLSessionDownloadTask {
     let session = NSURLSession.sharedSession()
     let downloadTask = session.downloadTaskWithURL(NSURL(string: url)!) { (location, _, error) -> Void in
-      if let downloadedImageData = NSData(contentsOfURL: location) {
+      if let downloadedImageData = NSData(contentsOfURL: location!) {
         downloadComplete(imageData: downloadedImageData)
       } else {
         // TODO: - handle error
-        println("error in downloadTaskWithURL completion handler")
+        print("error in downloadTaskWithURL completion handler")
       }
     }
     downloadTask.resume()
@@ -71,6 +69,6 @@ class FlickrClient
       let escapedValue = stringValue.stringByAddingPercentEncodingWithAllowedCharacters(NSCharacterSet.URLQueryAllowedCharacterSet())
       urlVars += [key + "=" + "\(escapedValue!)"]
     }
-    return (!urlVars.isEmpty ? "?" : "") + join("&", urlVars)
+    return (!urlVars.isEmpty ? "?" : "") + urlVars.joinWithSeparator("&")
   }
 }

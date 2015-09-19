@@ -53,8 +53,8 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
   
   var regionFilePath: String {
     let manager = NSFileManager.defaultManager()
-    let url = manager.URLsForDirectory(.DocumentDirectory, inDomains: .UserDomainMask).first as! NSURL
-    return url.URLByAppendingPathComponent("region").path!
+    let url = manager.URLsForDirectory(.DocumentDirectory, inDomains: .UserDomainMask).first
+    return url!.URLByAppendingPathComponent("region").path!
   }
   
   // MARK: - Lifecycle
@@ -70,17 +70,19 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
     
     let defaultCenter = NSNotificationCenter.defaultCenter()
     defaultCenter.addObserver(self, selector: "saveLastUserLocation:", name: "UIApplicationDidEnterBackgroundNotification", object: nil)
-    
-    var error: NSError?
-    fetchedResultsController.performFetch(&error)
+    do {
+      try fetchedResultsController.performFetch()
+    } catch let error as NSError {
+      print(error)
+    }
     addLocationPinsToMap()
   }
   
-//  override func viewWillAppear(animated: Bool) {
-//    super.viewWillAppear(animated)
-//    // reset the ImageManager to clear the cache and set flags to default
-//    imageManager = ImageManager()
-//  }
+  override func viewWillAppear(animated: Bool) {
+    super.viewWillAppear(animated)
+    // reset the ImageManager to clear the cache and set flags to default
+    imageManager = ImageManager()
+  }
   
   // MARK: - View management
   
@@ -114,8 +116,8 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
     }
   }
   
-  /// :returns: The location and size of the animated view.
-  /// :param: viewHeightForOffset Use this value to set the y position of the viewToAnimate relative to its super view.
+  /// - returns: The location and size of the animated view.
+  /// - parameter viewHeightForOffset: Use this value to set the y position of the viewToAnimate relative to its super view.
   func viewToAnimateRect(viewHeightForOffset height: CGFloat) -> CGRect {
     return CGRect(x: view.frame.origin.x,
       y: view.frame.height - height,
@@ -127,7 +129,9 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
   func handleRotationWhileEditing() {
     let currentDevice = UIDevice.currentDevice()
     currentDevice.beginGeneratingDeviceOrientationNotifications()
-    NSNotificationCenter.defaultCenter().addObserver(self, selector: "deviceOrientationDidChange:", name: UIDeviceOrientationDidChangeNotification, object: nil)
+    NSNotificationCenter.defaultCenter().addObserver(self, selector: "deviceOrientationDidChange:",
+                                                               name: UIDeviceOrientationDidChangeNotification,
+                                                             object: nil)
   }
   
   /// If the device is turned to landscape or portrait oreination, remove the previous instruction view and slide in a new one
@@ -147,11 +151,11 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
   // MARK: - MKMapViewDelegate and related
   
   /// Save the current map view each time the map's region property is changed
-  func mapView(mapView: MKMapView!, regionDidChangeAnimated animated: Bool) {
+  func mapView(mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
     regionToArchive = mapView.region
   }
   
-  func mapView(mapView: MKMapView!, viewForAnnotation annotation: MKAnnotation!) -> MKAnnotationView! {
+  func mapView(mapView: MKMapView, viewForAnnotation annotation: MKAnnotation) -> MKAnnotationView? {
     var pinAnnotationView = mapView.dequeueReusableAnnotationViewWithIdentifier("PinAnnotationView") as? MKPinAnnotationView
     
     if pinAnnotationView == nil {
@@ -165,35 +169,31 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
     return pinAnnotationView
   }
   
-  func mapView(mapView: MKMapView!, didSelectAnnotationView view: MKAnnotationView!) {
-    var error: NSError?
-    // perform a fetch so that we can be sure to get Pins that were just added
-    fetchedResultsController.performFetch(&error)
+  func mapView(mapView: MKMapView, didSelectAnnotationView view: MKAnnotationView) {
+    do {
+      // perform a fetch so that we can be sure to get Pins that were just added
+      try fetchedResultsController.performFetch()
+    } catch let error as NSError {
+      print(error)
+    }
     let locations = fetchedResultsController.fetchedObjects as! [Pin]
     // Filter locations to get a location item that matches the selected annotationView.  Use .first to get the location from the array.
     let selectedLocation = locations.filter
-      { $0.latitude == view.annotation.coordinate.latitude && $0.longitude == view.annotation.coordinate.longitude }
+      { $0.latitude == view.annotation!.coordinate.latitude && $0.longitude == view.annotation!.coordinate.longitude }
     let pin = selectedLocation.first
     if editing {
       if let urls = pin?.photoAlbum {
         imageManager.deletePhotosForURLs(urls)
         sharedContext.deleteObject(pin!)
-        mapView.removeAnnotation(view.annotation)
+        mapView.removeAnnotation(view.annotation!)
         CoreDataStackManager.sharedInstance.saveContext()
       }
     } else {
-      // for debug ONLY
-      // imageManager.imageDownloadComplete = true
-      if imageManager.imageDownloadComplete == true {
-        imageManager.addPersistedPhotosToCache(pin!.photoAlbum!)
-      }
-      dispatch_async(dispatch_get_main_queue()) {
-        let storyboard = UIStoryboard(name: "Main", bundle: nil)
-        let photoAlbumViewController = storyboard.instantiateViewControllerWithIdentifier("PhotoAlbumViewController") as! PhotoAlbumViewController
-        photoAlbumViewController.pin = pin
-        photoAlbumViewController.imageManager = self.imageManager
-        self.navigationController?.pushViewController(photoAlbumViewController, animated: true)
-      }
+      let storyboard = UIStoryboard(name: "Main", bundle: nil)
+      let photoAlbumViewController = storyboard.instantiateViewControllerWithIdentifier("PhotoAlbumViewController") as! PhotoAlbumViewController
+      photoAlbumViewController.pin = pin
+      photoAlbumViewController.imageManager = self.imageManager
+      navigationController?.pushViewController(photoAlbumViewController, animated: true)
     }
   }
   
@@ -204,7 +204,7 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
   func addLocationPinsToMap() {
     let fetchedLocations = fetchedResultsController.fetchedObjects as! [Pin]
     let annotations: [MKPointAnnotation] = fetchedLocations.map { (location) -> MKPointAnnotation in
-      var annotation = MKPointAnnotation()
+      let annotation = MKPointAnnotation()
       annotation.coordinate = CLLocationCoordinate2D(latitude: location.latitude as Double, longitude: location.longitude as Double)
       return annotation
     }
@@ -217,36 +217,12 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
     if recognizer.state != .Began {
       return
     }
-    // imageManager.downloadingNewImages = true
     let touchPoint = recognizer.locationInView(mapView)
     let touchCoordinate = mapView.convertPoint(touchPoint, toCoordinateFromView: mapView)
     droppedPin = MKPointAnnotation()
     droppedPin!.coordinate = touchCoordinate
-    mapView.addAnnotation(droppedPin)
-    let location = addLocationToContextForCoordinate(touchCoordinate)
-    preFetchPhotoDataForLocation(location)
-  }
-  
-  // MARK: - URL / Photo Downloading
-  
-  func preFetchPhotoDataForLocation(location: Pin) {
-    let boundingBox = BoundingBox(longitude: location.longitude as Double, latitude: location.latitude as Double)
-    FlickrClient.searchByBoundingBox(boundingBox) { success, message, photoURLs in
-      if success { // TODO: - add error handling
-        dispatch_async(dispatch_get_main_queue()) {
-          self.persistFlickrURLs(photoURLs!, forLocation: location)
-        }
-      } // TODO: - add alerts, remove pin if no photos exist for that location
-      // remove var droppedPin from mapView in completion handler of alert view
-    }
-  }
-  
-  /// Select 21 random URLs, add them to CoreData context, initiaite downloading and saving of images
-  ///:param: urls - Flickr URLS
-  func persistFlickrURLs(urls: [String], forLocation location: Pin) {
-    let photos = imageManager.randomURLs(urls)
-    imageManager.savePhotoURLsToCoreData(photos, forLocation: location)
-    imageManager.downloadPhotoAlbumImageDataFromURLs(photos)
+    mapView.addAnnotation(droppedPin!)
+    addLocationToContextForCoordinate(touchCoordinate)
   }
   
   // MARK: - Core Data related methods and properties
@@ -256,25 +232,19 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
   }
   
   /// Add the location to the CoreData context
-  func addLocationToContextForCoordinate(coordinate: CLLocationCoordinate2D) -> Pin {
-    let locationAttributes = [
-      Keys.Latitude : coordinate.latitude,
-      Keys.Longitude : coordinate.longitude
-    ]
-    
-    let location = Pin(latitude: coordinate.latitude, longitude: coordinate.longitude, context: sharedContext)
+  func addLocationToContextForCoordinate(coordinate: CLLocationCoordinate2D) {
+    let _ = Pin(latitude: coordinate.latitude, longitude: coordinate.longitude, context: sharedContext)
     CoreDataStackManager.sharedInstance.saveContext()
-    return location
   }
   
   lazy var fetchedResultsController: NSFetchedResultsController = {
-    
     let fetchRequest = NSFetchRequest(entityName: "Pin")
     fetchRequest.sortDescriptors = []
-    
-    let fetchedResultsController = NSFetchedResultsController(fetchRequest: fetchRequest, managedObjectContext: self.sharedContext, sectionNameKeyPath: nil, cacheName: nil)
+    let fetchedResultsController = NSFetchedResultsController(fetchRequest: fetchRequest,
+                                                      managedObjectContext: self.sharedContext,
+                                                        sectionNameKeyPath: nil,
+                                                                 cacheName: nil)
     fetchedResultsController.delegate = self
-    
     return fetchedResultsController
   }()
 }

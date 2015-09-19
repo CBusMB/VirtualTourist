@@ -24,7 +24,7 @@ class MapRegion: NSObject, NSCoding
     longitudeDelta = region.span.longitudeDelta
   }
   
-  required init(coder unarchiver: NSCoder) {
+  required init?(coder unarchiver: NSCoder) {
     latitude = unarchiver.decodeObjectForKey(Keys.Latitude) as! CLLocationDegrees
     longitude = unarchiver.decodeObjectForKey(Keys.Longitude) as! CLLocationDegrees
     latitudeDelta = unarchiver.decodeObjectForKey(Keys.LatitudeDelta) as! CLLocationDegrees

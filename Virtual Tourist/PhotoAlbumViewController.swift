@@ -58,8 +58,11 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
   // MARK: - Lifecycle
   override func viewDidLoad() {
     super.viewDidLoad()
-    var error: NSError?
-    fetchedResultsController.performFetch(&error) // TODO: - Handle errors
+    do {
+      try fetchedResultsController.performFetch()
+    } catch let error as NSError {
+      print(error)
+    } // TODO: - Handle errors
   }
   
   // MARK: - Core Data
@@ -68,8 +71,6 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
   }
   
   lazy var fetchedResultsController: NSFetchedResultsController = {
-//    let locationLatitude: NSNumber = self.annotation!.coordinate.latitude
-//    let locationLongitude: NSNumber = self.annotation!.coordinate.longitude
     let fetchRequest = NSFetchRequest(entityName: "Photo")
     fetchRequest.sortDescriptors = []
     fetchRequest.predicate = NSPredicate(format: "location == %@", self.pin!)
@@ -110,12 +111,12 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
   }
   
   func collectionView(collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-    let sectionInfo = fetchedResultsController.sections![section] as! NSFetchedResultsSectionInfo
+    let sectionInfo = fetchedResultsController.sections![section] 
     return sectionInfo.numberOfObjects
   }
   
   func collectionView(collectionView: UICollectionView, cellForItemAtIndexPath indexPath: NSIndexPath) -> UICollectionViewCell {
-    var cell = photoAlbumCollectionView.dequeueReusableCellWithReuseIdentifier(Constants.CellReuseIdentifier, forIndexPath: indexPath) as!PhotoAlbumCollectionViewCell
+    var cell = photoAlbumCollectionView.dequeueReusableCellWithReuseIdentifier(Constants.CellReuseIdentifier, forIndexPath: indexPath) as! PhotoAlbumCollectionViewCell
     
     // if we have downloadTasks, assign a task to each cell
     if imageManager?.downloadTasks.count > 0 {
@@ -123,15 +124,11 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
     
       if let taskState = cell.downloadTask?.state {
         switch taskState {
-        case .Running:
-          cell = configurePlaceholderCell(cell)
-        case .Suspended:
-          cell = configurePlaceholderCell(cell)
-        case .Canceling:
+        case .Running, .Suspended, .Canceling:
           cell = configurePlaceholderCell(cell)
           // if the task is completed, assign the image from the photo cache to the cell
         case .Completed:
-          println("index path is \(indexPath.item), cache count is \(imageManager!.photoCache.count)")
+          print("index path is \(indexPath.item), cache count is \(imageManager!.photoCache.count)")
           if imageManager?.photoCache.count > indexPath.item {
             if let cachedImage = imageManager?.photoCache[indexPath.item] {
               cell.backgroundView = nil
@@ -140,12 +137,10 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
           } else {
             cell = configurePlaceholderCell(cell)
           }
-        default:
-          cell = configurePlaceholderCell(cell)
         }
       }
     } else {
-      println("index path is \(indexPath.item), cache count is \(imageManager!.photoCache.count)")
+      print("index path is \(indexPath.item), cache count is \(imageManager!.photoCache.count)")
       if imageManager?.photoCache.count > indexPath.item {
         if let cachedImage = imageManager?.photoCache[indexPath.item] {
           cell.backgroundView = nil
@@ -170,7 +165,7 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
   
   func configurePlaceholderCell(cell: PhotoAlbumCollectionViewCell) -> PhotoAlbumCollectionViewCell {
     let activityView = UIActivityIndicatorView(activityIndicatorStyle: .WhiteLarge)
-    cell.imageView.image = nil
+    cell.imageView.image = UIImage(named: "placeholder")
     cell.backgroundView = activityView
     cell.bringSubviewToFront(cell.backgroundView!)
     activityView.startAnimating()
@@ -179,7 +174,7 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
   
   func collectionView(collectionView: UICollectionView, didSelectItemAtIndexPath indexPath: NSIndexPath) {
     let cell = photoAlbumCollectionView.cellForItemAtIndexPath(indexPath) as! PhotoAlbumCollectionViewCell
-    if let index = find(selectedIndexes, indexPath) {
+    if let index = selectedIndexes.indexOf(indexPath) {
       selectedIndexes.removeAtIndex(index)
     } else {
       selectedIndexes.append(indexPath)

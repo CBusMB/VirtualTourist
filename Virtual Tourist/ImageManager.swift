@@ -28,9 +28,9 @@ class ImageManager
   weak var delegate: ImageManagerDelegate?
   
   func savePhotoURLsToCoreData(urls: [String], forLocation location: Pin) {
-    println("savePhotoURLsToCoreData")
+    print("savePhotoURLsToCoreData")
     for url in urls {
-      let photoURL = Photo(photoURL: url, location: location, photoAlbumCount: urls.count, context: sharedContext)
+      let _ = Photo(photoURL: url, location: location, photoAlbumCount: urls.count, context: sharedContext)
     }
     dispatch_async(dispatch_get_main_queue()) {
       CoreDataStackManager.sharedInstance.saveContext()
@@ -41,20 +41,20 @@ class ImageManager
   }
   
   func downloadPhotoAlbumImageDataFromURLs(urls: [String]) {
-    println("downloadPhotoAlbumImageDataFromURLs")
+    print("downloadPhotoAlbumImageDataFromURLs")
     for url in urls {
       let downloadTask = FlickrClient.downloadImageAtURL(url) { imageData in
         if let dataToWrite = imageData {
           dispatch_async(dispatch_get_main_queue()) {
             self.savePhotoToFileSystemAsData(dataToWrite, withExternalURL: url)
-            println("\(self.imageURL(url))")
+            print("\(self.imageURL(url))")
 //            self.addDownloadedPhotoToCacheFromURL("\(self.imageURL(url))")
 //            println("added photo to cache from downloadPhotoAlbumImageDataFromURLs")
           }
         }
       }
       downloadTasks.append(downloadTask)
-      println("download tasks: \(downloadTasks.count)")
+      print("download tasks: \(downloadTasks.count)")
     }
     // imageDownloadComplete = true
   }
@@ -71,7 +71,7 @@ class ImageManager
     if urls.count < 21 {
       defaultCount = urls.count
     }
-    for i in 0..<defaultCount {
+    for _ in 0..<defaultCount {
       let randomIndex = Int(arc4random_uniform(UInt32(urls.count)))
       let randomURL = urls[randomIndex]
       urlArray.append(randomURL)
@@ -81,37 +81,40 @@ class ImageManager
   
   func savePhotoToFileSystemAsData(data: NSData, withExternalURL url: String) {
     let manager = NSFileManager.defaultManager()
-    let fileSystemURL = manager.URLsForDirectory(.DocumentDirectory, inDomains: .UserDomainMask).first as! NSURL
+    let fileSystemURL = manager.URLsForDirectory(.DocumentDirectory, inDomains: .UserDomainMask).first
     let truncatedPathComponent = imageFileName(url)
-    let filePath = fileSystemURL.URLByAppendingPathComponent(truncatedPathComponent).path!
+    let filePath = fileSystemURL!.URLByAppendingPathComponent(truncatedPathComponent).path!
     data.writeToFile(filePath, atomically: true)
-    println("savePhotoToFileSystemAsData")
+    print("savePhotoToFileSystemAsData")
     addDownloadedPhotoToCacheFromURL(filePath)
   }
   
   func deletePhotosForURLs(urls: [Photo]) {
     let manager = NSFileManager.defaultManager()
-    let url = manager.URLsForDirectory(.DocumentDirectory, inDomains: .UserDomainMask).first as! NSURL
+    let url = manager.URLsForDirectory(.DocumentDirectory, inDomains: .UserDomainMask).first
     for i in 0..<urls.count {
       if let path = urls[i].photo {
         let truncatedPathComponent = imageFileName(path)
-        let filePath = url.URLByAppendingPathComponent(truncatedPathComponent).path!
-        let error = NSErrorPointer()
-        manager.removeItemAtPath(filePath, error: error)
+        let filePath = url!.URLByAppendingPathComponent(truncatedPathComponent).path!
+        do {
+          try manager.removeItemAtPath(filePath)
+        } catch let error as NSError {
+          print(error.localizedDescription)
+        }
       }
     }
   }
   
-  ///:param: url - The full local URL path as a String
+  ///- parameter url: - The full local URL path as a String
   func addDownloadedPhotoToCacheFromURL(url: String) {
-    println("called addPhotoToCacheFromURL")
-    println(url)
+    print("called addPhotoToCacheFromURL")
+    print(url)
     if let imageData = NSData(contentsOfFile: url) {
       let image = UIImage(data: imageData)
       // let imageWithPath = [url : image]
       photoCache.append(image!)
       delegate?.imageManagerDidAddImageToCache(true, atIndex: photoCache.count - 1)
-      println("count in add to cache: \(photoCache.count)")
+      print("count in add to cache: \(photoCache.count)")
     }
   }
   
@@ -120,10 +123,10 @@ class ImageManager
   the file system for each url as UIImage,moves each UIImage to an 
   array for easy access by other classes
   
-  :param: urls - An array of Photo objects 
+  - parameter urls: - An array of Photo objects 
   */
   func addPersistedPhotosToCache(urls: [Photo]) {
-    println("addPersistedPhotosToCache called")
+    print("addPersistedPhotosToCache called")
     resetCacheAndTasks()
     for url in urls {
       if let photoURL = url.photo {
@@ -133,7 +136,7 @@ class ImageManager
           // let imageWithPath = ["\(path)" : image]
           photoCache.append(image!)
           delegate?.imageManagerDidAddImageToCache(true, atIndex: photoCache.count - 1)
-          println("count in add to cache: \(photoCache.count)")
+          print("count in add to cache: \(photoCache.count)")
         }
       }
     }
@@ -147,15 +150,37 @@ class ImageManager
   
   private func imageURL(url: String) -> NSURL {
     let truncatedPathComponent = imageFileName(url)
-    let directoryPath = NSSearchPathForDirectoriesInDomains(.DocumentDirectory, .UserDomainMask, true)[0] as! String
+    let directoryPath = NSSearchPathForDirectoriesInDomains(.DocumentDirectory, .UserDomainMask, true)[0] 
     let pathArray = [directoryPath, truncatedPathComponent]
     let fileURL = NSURL.fileURLWithPathComponents(pathArray)!
     return fileURL
   }
   
   private func imageFileName(path: String) -> String {
-    let startIndex = advance(path.endIndex, Constants.StartIndex)
+    let startIndex = path.endIndex.advancedBy(Constants.StartIndex)
     return path[Range(start: startIndex, end: path.endIndex)]
+  }
+  
+  // MARK: - URL / Photo Downloading
+  
+  func fetchPhotoDataForLocation(location: Pin) {
+    let boundingBox = BoundingBox(longitude: location.longitude as Double, latitude: location.latitude as Double)
+    FlickrClient.searchByBoundingBox(boundingBox) { success, message, photoURLs in
+      if success { // TODO: - add error handling
+        dispatch_async(dispatch_get_main_queue()) {
+          self.persistFlickrURLs(photoURLs!, forLocation: location)
+        }
+      } // TODO: - add alerts, remove pin if no photos exist for that location
+      // remove var droppedPin from mapView in completion handler of alert view
+    }
+  }
+  
+  /// Select 21 random URLs, add them to CoreData context, initiaite downloading and saving of images
+  ///- parameter urls: - Flickr URLS
+  func persistFlickrURLs(urls: [String], forLocation location: Pin) {
+    let photos = randomURLs(urls)
+    savePhotoURLsToCoreData(photos, forLocation: location)
+    downloadPhotoAlbumImageDataFromURLs(photos)
   }
   
   //MARK: - Core Data
