@@ -35,7 +35,7 @@ class FlickrClient
               let urls = photoURLs.map { $0["url_m"] as! String }
               completionHandler(success: true, message: nil, flickrPhotoURLs: urls)
             } else {
-              completionHandler(success: false, message: error?.localizedDescription, flickrPhotoURLs: nil)
+              completionHandler(success: false, message: Flickr.NoPhotosForLocation, flickrPhotoURLs: nil)
             }
           }
         } catch let jsonError as NSError {

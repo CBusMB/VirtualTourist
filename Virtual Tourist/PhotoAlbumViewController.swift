@@ -10,13 +10,14 @@ import UIKit
 import MapKit
 import CoreData
 
-class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UICollectionViewDelegate, NSFetchedResultsControllerDelegate,ImageManagerDelegate
+class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UICollectionViewDelegate, ImageManagerDelegate, NSFetchedResultsControllerDelegate
 {
   var selectedIndexes = [NSIndexPath]()
   var insertedIndexPaths: [NSIndexPath]?
   var deletedIndexPaths: [NSIndexPath]?
   var updatedIndexPaths: [NSIndexPath]?
   var selectedLocationCoordinate: CLLocationCoordinate2D?
+  
   weak var imageManager: ImageManager? {
     didSet {
       imageManager?.delegate = self
@@ -26,6 +27,15 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
   var pin: Pin? {
     didSet {
       selectedLocationCoordinate = CLLocationCoordinate2DMake(pin?.latitude as! Double, pin?.longitude as! Double)
+    }
+  }
+  
+  /// This property is set via the delegate, if it is false we display an alert to the user
+  var imageIndicator: Bool? {
+    didSet {
+      if imageIndicator == false {
+        presentNoImagesAlert()
+      }
     }
   }
   
@@ -49,7 +59,6 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
       photoAlbumCollectionView.delegate = self
       photoAlbumCollectionView.dataSource = self
       photoAlbumCollectionView.registerClass(PhotoAlbumCollectionViewCell.self, forCellWithReuseIdentifier: Constants.CellReuseIdentifier)
-      // photoAlbumCollectionView.registerClass(PhotoAlbumCollectionViewCell.self, forCellWithReuseIdentifier: Constants.PlaceholderCellReuseIdentifier)
     }
   }
   
@@ -61,39 +70,24 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
     do {
       try fetchedResultsController.performFetch()
     } catch let error as NSError {
-      print(error)
+      print(error.localizedDescription)
     } // TODO: - Handle errors
   }
   
-  // MARK: - Core Data
-  var sharedContext: NSManagedObjectContext {
-    return CoreDataStackManager.sharedInstance.managedObjectContext!
+  func presentNoImagesAlert() {
+    let noImagesContorller = UIAlertController(title: "No Images Found", message: "There are no images for the selected location", preferredStyle: .Alert)
+    let okAction = UIAlertAction(title: "OK", style: .Default) { Void in self.navigationController?.popToRootViewControllerAnimated(true) }
+    noImagesContorller.addAction(okAction)
+    presentViewController(noImagesContorller, animated: true, completion: nil)
   }
-  
-  lazy var fetchedResultsController: NSFetchedResultsController = {
-    let fetchRequest = NSFetchRequest(entityName: "Photo")
-    fetchRequest.sortDescriptors = []
-    fetchRequest.predicate = NSPredicate(format: "location == %@", self.pin!)
-    
-    let fetchedResultsController = NSFetchedResultsController(fetchRequest: fetchRequest,
-                                                      managedObjectContext: self.sharedContext,
-                                                        sectionNameKeyPath: nil,
-                                                                 cacheName: nil)
-    fetchedResultsController.delegate = self
-    
-    return fetchedResultsController
-    }()
   
   //MARK: - ImageManagerDelegate
-  func imageManagerDidAddImageToCache(flag: Bool, atIndex index: Int) {
-    // let indexPath = NSIndexPath(forItem: index, inSection: photoAlbumCollectionView.numberOfSections())
-    // photoAlbumCollectionView.insertItemsAtIndexPaths([indexPath])
+  func imageManagerDidFinishDownloadingImage() {
+    photoAlbumCollectionView.reloadData()
   }
   
-  func imageManagerDidPersistURLs(flag: Bool) {
-    if flag {
-      
-    }
+  func locationHasImages(flag: Bool) {
+    imageIndicator = flag
   }
   
   //MARK: - Collection View
@@ -111,7 +105,16 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
   }
   
   func collectionView(collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-    let sectionInfo = fetchedResultsController.sections![section] 
+    let sectionInfo = fetchedResultsController.sections![section]
+    if sectionInfo.numberOfObjects > 0 {
+      return sectionInfo.numberOfObjects
+    } else {
+      do {
+        try fetchedResultsController.performFetch()
+      } catch let error as NSError {
+        print(error.localizedDescription)
+      }
+    }
     return sectionInfo.numberOfObjects
   }
   
@@ -128,9 +131,9 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
           cell = configurePlaceholderCell(cell)
           // if the task is completed, assign the image from the photo cache to the cell
         case .Completed:
-          print("index path is \(indexPath.item), cache count is \(imageManager!.photoCache.count)")
-          if imageManager?.photoCache.count > indexPath.item {
-            if let cachedImage = imageManager?.photoCache[indexPath.item] {
+          print("index path is \(indexPath.item), cache count is \(imageManager!.dataSource.count)")
+          if imageManager?.dataSource.count > indexPath.item {
+            if let cachedImage = imageManager?.dataSource[indexPath.item].image {
               cell.backgroundView = nil
               cell.imageView.image = cachedImage
             }
@@ -139,10 +142,9 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
           }
         }
       }
-    } else {
-      print("index path is \(indexPath.item), cache count is \(imageManager!.photoCache.count)")
-      if imageManager?.photoCache.count > indexPath.item {
-        if let cachedImage = imageManager?.photoCache[indexPath.item] {
+    } else { // if there aren't any download tasks, just grab the image from the dataSource
+      if imageManager?.dataSource.count > indexPath.item {
+        if let cachedImage = imageManager?.dataSource[indexPath.item].image {
           cell.backgroundView = nil
           cell.imageView.image = cachedImage
         }
@@ -156,10 +158,6 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
 //    } else {
 //      cell.alpha = 1.0
 //    }
-    return cell
-  }
-  
-  func configurePhotoCell(cell: PhotoAlbumCollectionViewCell) -> PhotoAlbumCollectionViewCell {
     return cell
   }
   
@@ -182,6 +180,24 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
     
     // configurePhotoCell(cell, atIndexPath: indexPath)
   }
+  
+  var sharedContext: NSManagedObjectContext {
+    return CoreDataStackManager.sharedInstance.managedObjectContext!
+  }
+  
+  lazy var fetchedResultsController: NSFetchedResultsController = {
+    let fetchRequest = NSFetchRequest(entityName: "Photo")
+    fetchRequest.sortDescriptors = []
+    fetchRequest.predicate = NSPredicate(format: "location == %@", self.pin!)
+    
+    let fetchedResultsController = NSFetchedResultsController(fetchRequest: fetchRequest,
+      managedObjectContext: self.sharedContext,
+      sectionNameKeyPath: nil,
+      cacheName: nil)
+    fetchedResultsController.delegate = self
+    
+    return fetchedResultsController
+    }()
   
   // MARK: - Fetched Results Controller Delegate Methods
   

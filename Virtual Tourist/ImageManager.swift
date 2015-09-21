@@ -11,32 +11,45 @@ import CoreData
 
 protocol ImageManagerDelegate: class
 {
-  func imageManagerDidAddImageToCache(flag: Bool, atIndex index: Int)
-  func imageManagerDidPersistURLs(flag: Bool)
+  func imageManagerDidFinishDownloadingImage()
+  func locationHasImages(flag: Bool)
 }
 
-class ImageManager
+class ImageManager: NSObject, NSFetchedResultsControllerDelegate
 {
-//  var downloadingNewImages: Bool? = false
-  var imageDownloadComplete: Bool? = false
-//  var downloadingPhotoURLs: Bool? = false
+  var selectedIndexes = [NSIndexPath]()
+  var insertedIndexPaths: [NSIndexPath]?
+  var deletedIndexPaths: [NSIndexPath]?
   
-  var photoCache = [UIImage]()
+  var fileManager: NSFileManager {
+    return NSFileManager.defaultManager()
+  }
+
+  var pin: Pin?
+  
+  /// This property serves as the data source for the PhotoAlbumViewController.photoAlbumCollectionView
+  var dataSource = [ImageDataSource]()
   
   var downloadTasks = [NSURLSessionDownloadTask]()
   
   weak var delegate: ImageManagerDelegate?
   
+  var imageIndicator: Bool? {
+    didSet {
+      delegate?.locationHasImages(imageIndicator!)
+    }
+  }
+  
+  
+  /// Save URLs (local file paths) to CoreData
+  /// - parameter urls: local file paths
+  /// - parameter location: Pin (longitude and latitude data)
   func savePhotoURLsToCoreData(urls: [String], forLocation location: Pin) {
-    print("savePhotoURLsToCoreData")
     for url in urls {
       let _ = Photo(photoURL: url, location: location, photoAlbumCount: urls.count, context: sharedContext)
     }
     dispatch_async(dispatch_get_main_queue()) {
       CoreDataStackManager.sharedInstance.saveContext()
-      self.delegate?.imageManagerDidPersistURLs(true)
-      // self.downloadingPhotoURLs = false
-      // println("\(self.downloadingPhotoURLs)")
     }
   }
   
@@ -46,17 +59,14 @@ class ImageManager
       let downloadTask = FlickrClient.downloadImageAtURL(url) { imageData in
         if let dataToWrite = imageData {
           dispatch_async(dispatch_get_main_queue()) {
-            self.savePhotoToFileSystemAsData(dataToWrite, withExternalURL: url)
-            print("\(self.imageURL(url))")
-//            self.addDownloadedPhotoToCacheFromURL("\(self.imageURL(url))")
-//            println("added photo to cache from downloadPhotoAlbumImageDataFromURLs")
+            self.savePhotoToFileSystemAsData(dataToWrite, forFileName: self.imageURL(url))
+            self.delegate?.imageManagerDidFinishDownloadingImage()
           }
         }
       }
       downloadTasks.append(downloadTask)
       print("download tasks: \(downloadTasks.count)")
     }
-    // imageDownloadComplete = true
   }
   
   func cancelDownloadTasks() {
@@ -65,7 +75,9 @@ class ImageManager
     }
   }
   
-  func randomURLs(urls: [String]) -> [String] {
+  /// - parameter urls: an array of URLs as strings
+  /// - returns: an array of strings, max count 21, selected randomly from larger array
+  private func randomURLs(urls: [String]) -> [String] {
     var urlArray = [String]()
     var defaultCount = 21
     if urls.count < 21 {
@@ -79,25 +91,27 @@ class ImageManager
     return urlArray
   }
   
-  func savePhotoToFileSystemAsData(data: NSData, withExternalURL url: String) {
-    let manager = NSFileManager.defaultManager()
-    let fileSystemURL = manager.URLsForDirectory(.DocumentDirectory, inDomains: .UserDomainMask).first
-    let truncatedPathComponent = imageFileName(url)
-    let filePath = fileSystemURL!.URLByAppendingPathComponent(truncatedPathComponent).path!
-    data.writeToFile(filePath, atomically: true)
-    print("savePhotoToFileSystemAsData")
-    addDownloadedPhotoToCacheFromURL(filePath)
+  /// save data to file system as NSData object
+  /// - parameter data: Data to be written to file system
+  /// - parameter url: File name for file to be written
+  func savePhotoToFileSystemAsData(data: NSData, forFileName url: String) {
+    data.writeToFile(url, atomically: true)
+    addFilePathToDataSource(url)
   }
   
+  /// add file paths to the data source for use by the PhotoAlbumViewController
+  ///  - parameter filePath:  local URL where image data is stored
+  func addFilePathToDataSource(filePath: String) {
+    let imageDataSource = ImageDataSource(imageFilePath: filePath)
+    dataSource.append(imageDataSource)
+  }
+  
+  /// delete files from the file system
   func deletePhotosForURLs(urls: [Photo]) {
-    let manager = NSFileManager.defaultManager()
-    let url = manager.URLsForDirectory(.DocumentDirectory, inDomains: .UserDomainMask).first
-    for i in 0..<urls.count {
-      if let path = urls[i].photo {
-        let truncatedPathComponent = imageFileName(path)
-        let filePath = url!.URLByAppendingPathComponent(truncatedPathComponent).path!
+    for url in urls {
+      if let filePath = url.photo {
         do {
-          try manager.removeItemAtPath(filePath)
+          try fileManager.removeItemAtPath(filePath)
         } catch let error as NSError {
           print(error.localizedDescription)
         }
@@ -105,57 +119,16 @@ class ImageManager
     }
   }
   
-  ///- parameter url: - The full local URL path as a String
-  func addDownloadedPhotoToCacheFromURL(url: String) {
-    print("called addPhotoToCacheFromURL")
-    print(url)
-    if let imageData = NSData(contentsOfFile: url) {
-      let image = UIImage(data: imageData)
-      // let imageWithPath = [url : image]
-      photoCache.append(image!)
-      delegate?.imageManagerDidAddImageToCache(true, atIndex: photoCache.count - 1)
-      print("count in add to cache: \(photoCache.count)")
-    }
-  }
-  
-  /**
-  Takes external urls from CoreData store, grabs the NSData objects from 
-  the file system for each url as UIImage,moves each UIImage to an 
-  array for easy access by other classes
-  
-  - parameter urls: - An array of Photo objects 
-  */
-  func addPersistedPhotosToCache(urls: [Photo]) {
-    print("addPersistedPhotosToCache called")
-    resetCacheAndTasks()
-    for url in urls {
-      if let photoURL = url.photo {
-        let path = imageURL(photoURL)
-        if let imageData = NSData(contentsOfFile: "\(path)") {
-          let image = UIImage(data: imageData)
-          // let imageWithPath = ["\(path)" : image]
-          photoCache.append(image!)
-          delegate?.imageManagerDidAddImageToCache(true, atIndex: photoCache.count - 1)
-          print("count in add to cache: \(photoCache.count)")
-        }
-      }
-    }
-    // downloadingNewImages = false
-  }
-  
-  func resetCacheAndTasks() {
-    photoCache.removeAll(keepCapacity: false)
-    downloadTasks.removeAll(keepCapacity: false)
-  }
-  
-  private func imageURL(url: String) -> NSURL {
+  /// Turn an external URL into a local URL
+  private func imageURL(url: String) -> String {
     let truncatedPathComponent = imageFileName(url)
-    let directoryPath = NSSearchPathForDirectoriesInDomains(.DocumentDirectory, .UserDomainMask, true)[0] 
+    let directoryPath = NSSearchPathForDirectoriesInDomains(.DocumentDirectory, .UserDomainMask, true)[0]
     let pathArray = [directoryPath, truncatedPathComponent]
-    let fileURL = NSURL.fileURLWithPathComponents(pathArray)!
-    return fileURL
+    let fileURL = NSURL.fileURLWithPathComponents(pathArray)?.path!
+    return fileURL!
   }
   
+  /// Make a file name from the Flickr URL
   private func imageFileName(path: String) -> String {
     let startIndex = path.endIndex.advancedBy(Constants.StartIndex)
     return path[Range(start: startIndex, end: path.endIndex)]
@@ -164,22 +137,26 @@ class ImageManager
   // MARK: - URL / Photo Downloading
   
   func fetchPhotoDataForLocation(location: Pin) {
+    print("fetchPhotoDataForLocation")
     let boundingBox = BoundingBox(longitude: location.longitude as Double, latitude: location.latitude as Double)
     FlickrClient.searchByBoundingBox(boundingBox) { success, message, photoURLs in
-      if success { // TODO: - add error handling
+      if success {
         dispatch_async(dispatch_get_main_queue()) {
           self.persistFlickrURLs(photoURLs!, forLocation: location)
         }
-      } // TODO: - add alerts, remove pin if no photos exist for that location
-      // remove var droppedPin from mapView in completion handler of alert view
+      }
+      dispatch_async(dispatch_get_main_queue()) {
+        self.imageIndicator = success
+      }
     }
   }
   
   /// Select 21 random URLs, add them to CoreData context, initiaite downloading and saving of images
-  ///- parameter urls: - Flickr URLS
+  /// - parameter urls: Array of external URLs
   func persistFlickrURLs(urls: [String], forLocation location: Pin) {
     let photos = randomURLs(urls)
-    savePhotoURLsToCoreData(photos, forLocation: location)
+    let urlsToPersist = photos.map { imageURL($0) }
+    savePhotoURLsToCoreData(urlsToPersist, forLocation: location)
     downloadPhotoAlbumImageDataFromURLs(photos)
   }
   
@@ -187,4 +164,18 @@ class ImageManager
   var sharedContext: NSManagedObjectContext {
     return CoreDataStackManager.sharedInstance.managedObjectContext!
   }
+  
+  lazy var fetchedResultsController: NSFetchedResultsController = {
+    let fetchRequest = NSFetchRequest(entityName: "Photo")
+    fetchRequest.sortDescriptors = []
+    fetchRequest.predicate = NSPredicate(format: "location == %@", self.pin!)
+    
+    let fetchedResultsController = NSFetchedResultsController(fetchRequest: fetchRequest,
+      managedObjectContext: self.sharedContext,
+      sectionNameKeyPath: nil,
+      cacheName: nil)
+    fetchedResultsController.delegate = self
+    
+    return fetchedResultsController
+    }()
 }

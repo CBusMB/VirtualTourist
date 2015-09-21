@@ -34,6 +34,7 @@ struct Flickr {
   static let PerPageKey = "per_page"
   static let PerPageValue = "21"
   static let BoundingBoxCoordinateAdjustment = 0.09
+  static let NoPhotosForLocation = "There are no photos for this location"
 }
 
 struct Constants {

@@ -80,7 +80,7 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
   
   override func viewWillAppear(animated: Bool) {
     super.viewWillAppear(animated)
-    // reset the ImageManager to clear the cache and set flags to default
+    // reset the ImageManager
     imageManager = ImageManager()
   }
   
@@ -120,9 +120,9 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
   /// - parameter viewHeightForOffset: Use this value to set the y position of the viewToAnimate relative to its super view.
   func viewToAnimateRect(viewHeightForOffset height: CGFloat) -> CGRect {
     return CGRect(x: view.frame.origin.x,
-      y: view.frame.height - height,
-      width: view.frame.width,
-      height: view.frame.height / 8)
+                  y: view.frame.height - height,
+              width: view.frame.width,
+              height: view.frame.height / 8)
   }
   
   /// Set up a notification for when the orientation of the device changes
@@ -180,21 +180,31 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
     // Filter locations to get a location item that matches the selected annotationView.  Use .first to get the location from the array.
     let selectedLocation = locations.filter
       { $0.latitude == view.annotation!.coordinate.latitude && $0.longitude == view.annotation!.coordinate.longitude }
-    let pin = selectedLocation.first
-    if editing {
-      if let urls = pin?.photoAlbum {
-        imageManager.deletePhotosForURLs(urls)
-        sharedContext.deleteObject(pin!)
-        mapView.removeAnnotation(view.annotation!)
-        CoreDataStackManager.sharedInstance.saveContext()
+    if let pin = selectedLocation.first {
+      if editing {
+        if let urls = pin.photoAlbum {
+          imageManager.deletePhotosForURLs(urls)
+          sharedContext.deleteObject(pin)
+          mapView.removeAnnotation(view.annotation!)
+          CoreDataStackManager.sharedInstance.saveContext()
+        }
+      } else {
+        if pin.photoAlbum?.count > 0 {
+          for path in pin.photoAlbum! {
+            imageManager.addFilePathToDataSource(path.photo!)
+          }
+        } else {
+          imageManager.fetchPhotoDataForLocation(pin)
+        }
+        imageManager.pin = pin
+        let storyboard = UIStoryboard(name: "Main", bundle: nil)
+        let photoAlbumViewController = storyboard.instantiateViewControllerWithIdentifier("PhotoAlbumViewController") as! PhotoAlbumViewController
+        photoAlbumViewController.pin = pin
+        photoAlbumViewController.imageManager = self.imageManager
+        navigationController?.pushViewController(photoAlbumViewController, animated: true)
       }
-    } else {
-      let storyboard = UIStoryboard(name: "Main", bundle: nil)
-      let photoAlbumViewController = storyboard.instantiateViewControllerWithIdentifier("PhotoAlbumViewController") as! PhotoAlbumViewController
-      photoAlbumViewController.pin = pin
-      photoAlbumViewController.imageManager = self.imageManager
-      navigationController?.pushViewController(photoAlbumViewController, animated: true)
     }
+    mapView.deselectAnnotation(view.annotation, animated: false)
   }
   
   func scrollMapViewToRegion(region: MKCoordinateRegion) {
