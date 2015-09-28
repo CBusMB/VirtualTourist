@@ -15,7 +15,7 @@ protocol ImageManagerDelegate: class
   func locationHasImages(flag: Bool)
 }
 
-class ImageManager: NSObject, NSFetchedResultsControllerDelegate
+class ImageManager
 {
   var selectedIndexes = [NSIndexPath]()
   var insertedIndexPaths: [NSIndexPath]?
@@ -26,6 +26,8 @@ class ImageManager: NSObject, NSFetchedResultsControllerDelegate
   }
 
   var pin: Pin?
+  
+  var downloadedImageCount = 0
   
   /// This property serves as the data source for the PhotoAlbumViewController.photoAlbumCollectionView
   var dataSource = [ImageDataSource]()
@@ -40,6 +42,31 @@ class ImageManager: NSObject, NSFetchedResultsControllerDelegate
     }
   }
   
+  // MARK: - URL / Photo Downloading
+  
+  func fetchPhotoDataForLocation(location: Pin) {
+    print("fetchPhotoDataForLocation: \(location.latitude), \(location.longitude)")
+    let boundingBox = BoundingBox(longitude: location.longitude as Double, latitude: location.latitude as Double)
+    FlickrClient.searchByBoundingBox(boundingBox) { success, _, photoURLs in
+      if success {
+        dispatch_async(dispatch_get_main_queue()) {
+          self.persistFlickrURLs(photoURLs!, forLocation: location)
+        }
+      }
+      dispatch_async(dispatch_get_main_queue()) {
+        self.imageIndicator = success
+      }
+    }
+  }
+  
+  /// Select 21 random URLs, add them to CoreData context, initiaite downloading and saving of images
+  /// - parameter urls: Array of external URLs
+  func persistFlickrURLs(urls: [String], forLocation location: Pin) {
+    let photos = randomURLs(urls)
+    let urlsToPersist = photos.map { imageURL($0) }
+    savePhotoURLsToCoreData(urlsToPersist, forLocation: location)
+    downloadPhotoAlbumImageDataFromURLs(photos)
+  }
   
   /// Save URLs (local file paths) to CoreData
   /// - parameter urls: local file paths
@@ -50,6 +77,7 @@ class ImageManager: NSObject, NSFetchedResultsControllerDelegate
     }
     dispatch_async(dispatch_get_main_queue()) {
       CoreDataStackManager.sharedInstance.saveContext()
+      print("saved in savePhotoURLsToCoreData")
     }
   }
   
@@ -65,7 +93,7 @@ class ImageManager: NSObject, NSFetchedResultsControllerDelegate
         }
       }
       downloadTasks.append(downloadTask)
-      print("download tasks: \(downloadTasks.count)")
+      print("appended download task")
     }
   }
   
@@ -73,6 +101,12 @@ class ImageManager: NSObject, NSFetchedResultsControllerDelegate
     for downloadTask in downloadTasks {
       downloadTask.cancel()
     }
+  }
+  
+  func resetDataSourceDownloadTasksAndCounter() {
+    dataSource.removeAll()
+    downloadTasks.removeAll()
+    downloadedImageCount = 0
   }
   
   /// - parameter urls: an array of URLs as strings
@@ -95,15 +129,19 @@ class ImageManager: NSObject, NSFetchedResultsControllerDelegate
   /// - parameter data: Data to be written to file system
   /// - parameter url: File name for file to be written
   func savePhotoToFileSystemAsData(data: NSData, forFileName url: String) {
+    print("savePhotoToFileSystemAsData")
     data.writeToFile(url, atomically: true)
     addFilePathToDataSource(url)
+    downloadedImageCount++
   }
   
   /// add file paths to the data source for use by the PhotoAlbumViewController
   ///  - parameter filePath:  local URL where image data is stored
+  /// - parameter imageData: Image object stored as NSData
   func addFilePathToDataSource(filePath: String) {
     let imageDataSource = ImageDataSource(imageFilePath: filePath)
     dataSource.append(imageDataSource)
+    print("\(dataSource.count)")
   }
   
   /// delete files from the file system
@@ -134,48 +172,8 @@ class ImageManager: NSObject, NSFetchedResultsControllerDelegate
     return path[Range(start: startIndex, end: path.endIndex)]
   }
   
-  // MARK: - URL / Photo Downloading
-  
-  func fetchPhotoDataForLocation(location: Pin) {
-    print("fetchPhotoDataForLocation")
-    let boundingBox = BoundingBox(longitude: location.longitude as Double, latitude: location.latitude as Double)
-    FlickrClient.searchByBoundingBox(boundingBox) { success, message, photoURLs in
-      if success {
-        dispatch_async(dispatch_get_main_queue()) {
-          self.persistFlickrURLs(photoURLs!, forLocation: location)
-        }
-      }
-      dispatch_async(dispatch_get_main_queue()) {
-        self.imageIndicator = success
-      }
-    }
-  }
-  
-  /// Select 21 random URLs, add them to CoreData context, initiaite downloading and saving of images
-  /// - parameter urls: Array of external URLs
-  func persistFlickrURLs(urls: [String], forLocation location: Pin) {
-    let photos = randomURLs(urls)
-    let urlsToPersist = photos.map { imageURL($0) }
-    savePhotoURLsToCoreData(urlsToPersist, forLocation: location)
-    downloadPhotoAlbumImageDataFromURLs(photos)
-  }
-  
   //MARK: - Core Data
   var sharedContext: NSManagedObjectContext {
     return CoreDataStackManager.sharedInstance.managedObjectContext!
   }
-  
-  lazy var fetchedResultsController: NSFetchedResultsController = {
-    let fetchRequest = NSFetchRequest(entityName: "Photo")
-    fetchRequest.sortDescriptors = []
-    fetchRequest.predicate = NSPredicate(format: "location == %@", self.pin!)
-    
-    let fetchedResultsController = NSFetchedResultsController(fetchRequest: fetchRequest,
-      managedObjectContext: self.sharedContext,
-      sectionNameKeyPath: nil,
-      cacheName: nil)
-    fetchedResultsController.delegate = self
-    
-    return fetchedResultsController
-    }()
 }

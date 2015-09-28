@@ -49,11 +49,13 @@ class FlickrClient
   class func downloadImageAtURL(url: String, downloadComplete: (imageData: NSData?) -> Void) -> NSURLSessionDownloadTask {
     let session = NSURLSession.sharedSession()
     let downloadTask = session.downloadTaskWithURL(NSURL(string: url)!) { (location, _, error) -> Void in
-      if let downloadedImageData = NSData(contentsOfURL: location!) {
-        downloadComplete(imageData: downloadedImageData)
-      } else {
-        // TODO: - handle error
-        print("error in downloadTaskWithURL completion handler")
+      if let temporaryLocation = location {
+        if let downloadedImageData = NSData(contentsOfURL: temporaryLocation) {
+          downloadComplete(imageData: downloadedImageData)
+        } else {
+          // TODO: - handle error
+          print("error in downloadTaskWithURL completion handler")
+        }
       }
     }
     downloadTask.resume()

@@ -189,11 +189,19 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
           CoreDataStackManager.sharedInstance.saveContext()
         }
       } else {
-        if pin.photoAlbum?.count > 0 {
-          for path in pin.photoAlbum! {
-            imageManager.addFilePathToDataSource(path.photo!)
+        let fileManager = NSFileManager.defaultManager()
+        var persistedImageCount = 0
+        for path in pin.photoAlbum! {
+          if fileManager.fileExistsAtPath(path.photo!) {
+            persistedImageCount++
           }
-        } else {
+          if persistedImageCount == (pin.photoAlbum?.count)! {
+            for path in pin.photoAlbum! {
+              imageManager.addFilePathToDataSource(path.photo!)
+            }
+          }
+        }
+        if imageManager.dataSource.count == 0 {
           imageManager.fetchPhotoDataForLocation(pin)
         }
         imageManager.pin = pin

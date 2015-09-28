@@ -10,12 +10,12 @@ import Foundation
 import UIKit
 
 struct ImageDataSource {
-  var imageFilePath: String?
+  var imageFilePath: String
   var image: UIImage {
-    if UIImage(contentsOfFile: imageFilePath!) != nil {
-      return UIImage(contentsOfFile: imageFilePath!)!
+    if UIImage(contentsOfFile: imageFilePath) != nil {
+      return UIImage(contentsOfFile: imageFilePath)!
     } else {
       return UIImage(named: "placeholder")!
-    }    
+    }
   }
 }

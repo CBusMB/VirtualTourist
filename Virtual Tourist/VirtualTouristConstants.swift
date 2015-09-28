@@ -42,4 +42,6 @@ struct Constants {
   static let CellReuseIdentifier = "PhotoCell"
   static let PlaceholderCellReuseIdentifier = "PlaceholderCell"
   static let PhotoDownloadQOS = Int(QOS_CLASS_USER_INTERACTIVE.rawValue)
+  static let RemoveSelectedPhotos = "Remove Selected Photos"
+  static let RefreshPhotos = "Refresh Photos"
 }
