@@ -116,27 +116,31 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
   
   func collectionView(collectionView: UICollectionView, cellForItemAtIndexPath indexPath: NSIndexPath) -> UICollectionViewCell {
     let cell = photoAlbumCollectionView.dequeueReusableCellWithReuseIdentifier(Constants.CellReuseIdentifier, forIndexPath: indexPath) as! PhotoAlbumCollectionViewCell
-    configurePhotoCell(cell, atIndexPath: indexPath)
+    configureCell(cell, atIndexPath: indexPath)
     
     
 
     return cell
   }
   
-  func configurePhotoCell(cell: PhotoAlbumCollectionViewCell, atIndexPath indexPath: NSIndexPath) {
+  func configureCell(var cell: PhotoAlbumCollectionViewCell, atIndexPath indexPath: NSIndexPath) {
     let fileManager = NSFileManager.defaultManager()
-    let photoURL = fetchedResultsController.objectAtIndexPath(indexPath)
-    cell.photoURL = photoURL as? Photo
-    if let localImageURL = imageManager?.imageURL("\(cell.photoURL)") {
+    let photo = fetchedResultsController.objectAtIndexPath(indexPath)
+    cell.photoURL = photo as? Photo
+    print("\(cell.photoURL?.photo)")
+    if let localImageURL = imageManager?.imageURL((cell.photoURL?.photo)!) {
       if fileManager.fileExistsAtPath(localImageURL) {
-        cell.imageView.image = UIImage(contentsOfFile: localImageURL)
+        cell.imageView.image = UIImage(data: NSData(contentsOfFile: localImageURL)!)
       } else {
-        cell.downloadTask = imageManager?.downloadPhotoAlbumImageDataFromURL("\(cell.photoURL)")
-        let taskState = cell.downloadTask?.state
-        switch taskState {
-        case .Running:
-          cell = configurePlaceholderCell(cell)
-          case
+        cell.downloadTask = imageManager?.downloadPhotoAlbumImageDataFromURL((cell.photoURL?.photo)!)
+        if let taskState = cell.downloadTask?.state {
+          switch taskState {
+          case .Running, .Suspended, .Canceling:
+            cell = configurePlaceholderCell(cell)
+          case .Completed:
+            cell.activityView?.stopAnimating()
+            cell.imageView.image = UIImage(data: NSData(contentsOfFile: localImageURL)!)
+          }
         }
       }
     }

@@ -189,30 +189,23 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
           CoreDataStackManager.sharedInstance.saveContext()
         }
       } else {
-        let fileManager = NSFileManager.defaultManager()
-        var persistedImageCount = 0
-        for path in pin.photoAlbum! {
-          if fileManager.fileExistsAtPath(path.photo!) {
-            persistedImageCount++
-          }
-          if persistedImageCount == (pin.photoAlbum?.count)! {
-            for path in pin.photoAlbum! {
-              imageManager.addFilePathToDataSource(path.photo!)
-            }
-          }
-        }
-        if imageManager.dataSource.count == 0 {
+        if pin.photoAlbum?.count > 0 {
+          pushToCollectionViewWithPin(pin)
+        } else {
           imageManager.fetchPhotoDataForLocation(pin)
+          pushToCollectionViewWithPin(pin)
         }
-        imageManager.pin = pin
-        let storyboard = UIStoryboard(name: "Main", bundle: nil)
-        let photoAlbumViewController = storyboard.instantiateViewControllerWithIdentifier("PhotoAlbumViewController") as! PhotoAlbumViewController
-        photoAlbumViewController.pin = pin
-        photoAlbumViewController.imageManager = self.imageManager
-        navigationController?.pushViewController(photoAlbumViewController, animated: true)
       }
     }
     mapView.deselectAnnotation(view.annotation, animated: false)
+  }
+  
+  func pushToCollectionViewWithPin(pin: Pin) {
+    let storyboard = UIStoryboard(name: "Main", bundle: nil)
+    let photoAlbumViewController = storyboard.instantiateViewControllerWithIdentifier("PhotoAlbumViewController") as! PhotoAlbumViewController
+    photoAlbumViewController.pin = pin
+    photoAlbumViewController.imageManager = self.imageManager
+    navigationController?.pushViewController(photoAlbumViewController, animated: true)
   }
   
   func scrollMapViewToRegion(region: MKCoordinateRegion) {
