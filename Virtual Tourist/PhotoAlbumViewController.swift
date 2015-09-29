@@ -132,7 +132,8 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
         cell.imageView.image = UIImage(contentsOfFile: localImageURL)
       } else {
         cell.downloadTask = imageManager?.downloadPhotoAlbumImageDataFromURL("\(cell.photoURL)")
-        switch cell.downloadTask {
+        let taskState = cell.downloadTask?.state
+        switch taskState {
         case .Running:
           cell = configurePlaceholderCell(cell)
           case
