@@ -63,9 +63,7 @@ class ImageManager
   /// - parameter urls: Array of external URLs
   func persistFlickrURLs(urls: [String], forLocation location: Pin) {
     let photos = randomURLs(urls)
-    let urlsToPersist = photos.map { imageURL($0) }
-    savePhotoURLsToCoreData(urlsToPersist, forLocation: location)
-    downloadPhotoAlbumImageDataFromURLs(photos)
+    savePhotoURLsToCoreData(photos, forLocation: location)
   }
   
   /// Save URLs (local file paths) to CoreData
@@ -81,20 +79,17 @@ class ImageManager
     }
   }
   
-  func downloadPhotoAlbumImageDataFromURLs(urls: [String]) {
+  func downloadPhotoAlbumImageDataFromURL(url: String) -> NSURLSessionDownloadTask {
     print("downloadPhotoAlbumImageDataFromURLs")
-    for url in urls {
-      let downloadTask = FlickrClient.downloadImageAtURL(url) { imageData in
-        if let dataToWrite = imageData {
-          dispatch_async(dispatch_get_main_queue()) {
-            self.savePhotoToFileSystemAsData(dataToWrite, forFileName: self.imageURL(url))
-            self.delegate?.imageManagerDidFinishDownloadingImage()
-          }
+    let downloadTask = FlickrClient.downloadImageAtURL(url) { imageData in
+      if let dataToWrite = imageData {
+        dispatch_async(dispatch_get_main_queue()) {
+          self.savePhotoToFileSystemAsData(dataToWrite, forFileName: self.imageURL(url))
+          self.delegate?.imageManagerDidFinishDownloadingImage()
         }
       }
-      downloadTasks.append(downloadTask)
-      print("appended download task")
     }
+    return downloadTask
   }
   
   func cancelDownloadTasks() {
@@ -158,7 +153,7 @@ class ImageManager
   }
   
   /// Turn an external URL into a local URL
-  private func imageURL(url: String) -> String {
+  func imageURL(url: String) -> String {
     let truncatedPathComponent = imageFileName(url)
     let directoryPath = NSSearchPathForDirectoriesInDomains(.DocumentDirectory, .UserDomainMask, true)[0]
     let pathArray = [directoryPath, truncatedPathComponent]

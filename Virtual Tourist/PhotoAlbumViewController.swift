@@ -115,49 +115,35 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
   }
   
   func collectionView(collectionView: UICollectionView, cellForItemAtIndexPath indexPath: NSIndexPath) -> UICollectionViewCell {
-    var cell = photoAlbumCollectionView.dequeueReusableCellWithReuseIdentifier(Constants.CellReuseIdentifier, forIndexPath: indexPath) as! PhotoAlbumCollectionViewCell
+    let cell = photoAlbumCollectionView.dequeueReusableCellWithReuseIdentifier(Constants.CellReuseIdentifier, forIndexPath: indexPath) as! PhotoAlbumCollectionViewCell
+    configurePhotoCell(cell, atIndexPath: indexPath)
     
-    // if we have downloadTasks, assign a task to each cell
-    if imageManager?.downloadTasks.count > 0 {
-      print("\(imageManager?.downloadTasks.count)")
-      print(indexPath.item)
-      cell.downloadTask = imageManager!.downloadTasks[indexPath.item]
     
-      if let taskState = cell.downloadTask?.state {
-        switch taskState {
-        case .Running, .Suspended, .Canceling:
-          cell = configurePlaceholderCell(cell)
-          // if the task is completed, assign the image from the photo cache to the cell
-        case .Completed:
-          if imageManager?.dataSource.count > indexPath.item {
-            if let cachedImage = imageManager?.dataSource[indexPath.item].image {
-              cell.activityView?.stopAnimating()
-              cell.backgroundView?.alpha = 1.0
-              cell.imageView.image = cachedImage
-            }
-          } else {
-            cell = configurePlaceholderCell(cell)
-          }
-        }
-      }
-    } else { // if there aren't any download tasks, just grab the image from the dataSource
-      if imageManager?.dataSource.count > indexPath.item {
-        if let cachedImage = imageManager?.dataSource[indexPath.item].image {
-          cell.activityView?.stopAnimating()
-          cell.backgroundView?.alpha = 1.0
-          cell.imageView.image = cachedImage
-        }
+
+    return cell
+  }
+  
+  func configurePhotoCell(cell: PhotoAlbumCollectionViewCell, atIndexPath indexPath: NSIndexPath) {
+    let fileManager = NSFileManager.defaultManager()
+    let photoURL = fetchedResultsController.objectAtIndexPath(indexPath)
+    cell.photoURL = photoURL as? Photo
+    if let localImageURL = imageManager?.imageURL("\(cell.photoURL)") {
+      if fileManager.fileExistsAtPath(localImageURL) {
+        cell.imageView.image = UIImage(contentsOfFile: localImageURL)
       } else {
-        cell = configurePlaceholderCell(cell)
+        cell.downloadTask = imageManager?.downloadPhotoAlbumImageDataFromURL("\(cell.photoURL)")
+        switch cell.downloadTask {
+        case .Running:
+          cell = configurePlaceholderCell(cell)
+          case
+        }
       }
     }
-    
-//    if let index = find(selectedIndexes, indexPath) {
-//      cell.alpha = 0.09
-//    } else {
-//      cell.alpha = 1.0
-//    }
-    return cell
+    if let _ = selectedIndexes.indexOf(indexPath) {
+      cell.backgroundView!.alpha = 0.05
+    } else {
+      cell.backgroundView!.alpha = 1.0
+    }
   }
   
   func configurePlaceholderCell(cell: PhotoAlbumCollectionViewCell) -> PhotoAlbumCollectionViewCell {
