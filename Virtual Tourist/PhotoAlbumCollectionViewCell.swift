@@ -22,7 +22,14 @@ class PhotoAlbumCollectionViewCell: UICollectionViewCell
   }
   
   var imageView: UIImageView!
-  var downloadTask: NSURLSessionDownloadTask?
+  var downloadTask: NSURLSessionDownloadTask? {
+    didSet {
+      if let taskToCancel = oldValue {
+        taskToCancel.cancel()
+      }
+    }
+  }
+  	
   var activityView: UIActivityIndicatorView?
-  var photoURL: Photo?
+  var photoForCell: Photo?
 }

@@ -10,7 +10,7 @@ import UIKit
 import MapKit
 import CoreData
 
-class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UICollectionViewDelegate, ImageManagerDelegate, NSFetchedResultsControllerDelegate
+class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UICollectionViewDelegate, NSFetchedResultsControllerDelegate, ImageManagerDelegate
 {
   var selectedIndexes = [NSIndexPath]()
   var insertedIndexPaths: [NSIndexPath]!
@@ -85,10 +85,9 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
   }
   
   //MARK: - ImageManagerDelegate
-  func imageManagerDidFinishDownloadingImage() {
-    print("imageManagerDidFinishDownloadingImage")
-    photoAlbumCollectionView.reloadData()
-  }
+//  func imageManagerDidFinishDownloadingImage() {
+//    photoAlbumCollectionView.reloadData()
+//  }
   
   func locationHasImages(flag: Bool) {
     imageIndicator = flag
@@ -108,48 +107,60 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
     photoAlbumCollectionView.collectionViewLayout = layout
   }
   
+  func numberOfSectionsInCollectionView(collectionView: UICollectionView) -> Int {
+    return self.fetchedResultsController.sections?.count ?? 0
+  }
+  
   func collectionView(collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
     let sectionInfo = fetchedResultsController.sections![section]
     print("number of objects: \(sectionInfo.numberOfObjects)")
     return sectionInfo.numberOfObjects
   }
   
+  func collectionView(collectionView: UICollectionView, shouldSelectItemAtIndexPath indexPath: NSIndexPath) -> Bool {
+    let cell = photoAlbumCollectionView.cellForItemAtIndexPath(indexPath) as! PhotoAlbumCollectionViewCell
+    let activityIndicatorView = cell.activityView!
+    if activityIndicatorView.isAnimating() {
+      return false
+    }
+    return true
+  }
+  
   func collectionView(collectionView: UICollectionView, cellForItemAtIndexPath indexPath: NSIndexPath) -> UICollectionViewCell {
     let cell = photoAlbumCollectionView.dequeueReusableCellWithReuseIdentifier(Constants.CellReuseIdentifier, forIndexPath: indexPath) as! PhotoAlbumCollectionViewCell
     configureCell(cell, atIndexPath: indexPath)
-    
-    
-
     return cell
   }
   
   func configureCell(var cell: PhotoAlbumCollectionViewCell, atIndexPath indexPath: NSIndexPath) {
     let fileManager = NSFileManager.defaultManager()
     let photo = fetchedResultsController.objectAtIndexPath(indexPath)
-    cell.photoURL = photo as? Photo
-    print("\(cell.photoURL?.photo)")
-    if let localImageURL = imageManager?.imageURL((cell.photoURL?.photo)!) {
+    cell.photoForCell = photo as? Photo
+    if let localImageURL = imageManager?.imageURL((cell.photoForCell?.photo)!) {
       if fileManager.fileExistsAtPath(localImageURL) {
+        cell.activityView?.stopAnimating()
         cell.imageView.image = UIImage(data: NSData(contentsOfFile: localImageURL)!)
       } else {
-        cell.downloadTask = imageManager?.downloadPhotoAlbumImageDataFromURL((cell.photoURL?.photo)!)
-        if let taskState = cell.downloadTask?.state {
-          switch taskState {
-          case .Running, .Suspended, .Canceling:
-            cell = configurePlaceholderCell(cell)
-          case .Completed:
+        let task = imageManager?.downloadPhotoAlbumImageDataFromURL((cell.photoForCell?.photo)!) { data in
+          dispatch_async(dispatch_get_main_queue()) {
+            cell.imageView.image = UIImage(data: data)
             cell.activityView?.stopAnimating()
-            cell.imageView.image = UIImage(data: NSData(contentsOfFile: localImageURL)!)
           }
         }
+        if let taskState = task?.state {
+          switch (taskState) {
+          case .Completed:
+            cell.activityView?.stopAnimating()
+            break
+          case .Running, .Suspended, .Canceling:
+            cell = configurePlaceholderCell(cell)
+          }
+        }
+        cell.downloadTask = task
       }
     }
-    if let _ = selectedIndexes.indexOf(indexPath) {
-      cell.backgroundView!.alpha = 0.05
-    } else {
-      cell.backgroundView!.alpha = 1.0
-    }
   }
+  
   
   func configurePlaceholderCell(cell: PhotoAlbumCollectionViewCell) -> PhotoAlbumCollectionViewCell {
     cell.activityView = UIActivityIndicatorView(activityIndicatorStyle: .WhiteLarge)
@@ -161,35 +172,48 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
   }
   
   func collectionView(collectionView: UICollectionView, didSelectItemAtIndexPath indexPath: NSIndexPath) {
-    toggleRefreshButtonTitle()
     let cell = photoAlbumCollectionView.cellForItemAtIndexPath(indexPath) as! PhotoAlbumCollectionViewCell
     if let index = selectedIndexes.indexOf(indexPath) {
       selectedIndexes.removeAtIndex(index)
+      cell.alpha = 1.0
     } else {
       selectedIndexes.append(indexPath)
+      print("selected indexes: \(selectedIndexes.count)")
+      cell.alpha = 0.5
     }
-    
-    // configurePhotoCell(cell, atIndexPath: indexPath)
+    configureCell(cell, atIndexPath: indexPath)
+    toggleRefreshButtonTitle()
   }
   
   func toggleRefreshButtonTitle() {
-    if refreshButton.title == Constants.RemoveSelectedPhotos {
-      refreshButton.title = Constants.RefreshPhotos
-    } else {
+    if selectedIndexes.count > 0 {
       refreshButton.title = Constants.RemoveSelectedPhotos
+    } else {
+      refreshButton.title = Constants.RefreshPhotos
     }
   }
   
   @IBAction func editPhotoCollection(sender: UIBarButtonItem) {
-    if sender.title == Constants.RefreshPhotos {
-      imageManager?.cancelDownloadTasks()
-      imageManager?.resetDataSourceDownloadTasksAndCounter()
+    print("editPhotoCollection \(selectedIndexes.count)")
+    if selectedIndexes.isEmpty {
       imageManager?.deletePhotosForURLs((pin?.photoAlbum)!)
-      deleteAllPhotos()
+      deleteAllPhotoPathsFromCoreDataStore()
       imageManager?.fetchPhotoDataForLocation(pin!)
     } else {
-      
+      print("delete selected items")
+      deleteSelectedPhotoPathsFromCoreDataStore()
+      deletePhotosForSelectedIndexPaths()
     }
+  }
+  
+  func deletePhotosForSelectedIndexPaths() {
+    print("deletePhotosForSelectedIndexPaths")
+    var selectedPhotos = [Photo]()
+    for path in selectedIndexes {
+      let cell = collectionView(photoAlbumCollectionView, cellForItemAtIndexPath: path) as! PhotoAlbumCollectionViewCell
+      selectedPhotos.append(cell.photoForCell!)
+    }
+    imageManager?.deletePhotosForURLs(selectedPhotos)
   }
   
   // MARK: - Core Data
@@ -203,24 +227,26 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
     } // TODO: - Handle errors
   }
   
-  func deleteAllPhotos() {
+  func deleteAllPhotoPathsFromCoreDataStore() {
+    print("deleteAllPhotoPathsFromCoreDataStore")     
     for photo in fetchedResultsController.fetchedObjects as! [Photo] {
       sharedContext.deleteObject(photo)
     }
+    CoreDataStackManager.sharedInstance.saveContext()
   }
   
-  func deleteSelectedPhotos() {
+  func deleteSelectedPhotoPathsFromCoreDataStore() {
     var photosToDelete = [Photo]()
-    
     for indexPath in selectedIndexes {
       photosToDelete.append(fetchedResultsController.objectAtIndexPath(indexPath) as! Photo)
     }
-    
+    print("photos to delete count: \(photosToDelete.count)")
     for photo in photosToDelete {
       sharedContext.deleteObject(photo)
     }
     
     selectedIndexes = [NSIndexPath]()
+    CoreDataStackManager.sharedInstance.saveContext()
   }
   
   var sharedContext: NSManagedObjectContext {
@@ -250,21 +276,19 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
   
   func controller(controller: NSFetchedResultsController, didChangeObject anObject: AnyObject, atIndexPath indexPath: NSIndexPath?, forChangeType type: NSFetchedResultsChangeType, newIndexPath: NSIndexPath?) {
     switch type {
-      
     case .Insert:
-      print("Insert an item")
+      print("insert")
       insertedIndexPaths.append(newIndexPath!)
       break
     case .Delete:
-      print("Delete an item")
+      print("Delete an item: \(deletedIndexPaths.count)")
       deletedIndexPaths.append(indexPath!)
       break
     case .Update:
       print("Update an item.")
       updatedIndexPaths.append(indexPath!)
       break
-    case .Move:
-      print("Move an item. We don't expect to see this in this app.")
+    default:
       break
     }
   }
@@ -273,7 +297,7 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
     
     print("in controllerDidChangeContent. changes.count: \(insertedIndexPaths.count + deletedIndexPaths.count)")
     
-    photoAlbumCollectionView.performBatchUpdates({() -> Void in
+    photoAlbumCollectionView.performBatchUpdates ({() -> Void in
       
       for indexPath in self.insertedIndexPaths {
         self.photoAlbumCollectionView.insertItemsAtIndexPaths([indexPath])

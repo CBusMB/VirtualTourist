@@ -11,7 +11,7 @@ import CoreData
 
 protocol ImageManagerDelegate: class
 {
-  func imageManagerDidFinishDownloadingImage()
+  // func imageManagerDidFinishDownloadingImage()
   func locationHasImages(flag: Bool)
 }
 
@@ -45,7 +45,6 @@ class ImageManager
   // MARK: - URL / Photo Downloading
   
   func fetchPhotoDataForLocation(location: Pin) {
-    print("fetchPhotoDataForLocation: \(location.latitude), \(location.longitude)")
     let boundingBox = BoundingBox(longitude: location.longitude as Double, latitude: location.latitude as Double)
     FlickrClient.searchByBoundingBox(boundingBox) { success, _, photoURLs in
       if success {
@@ -79,15 +78,14 @@ class ImageManager
     }
   }
   
-  func downloadPhotoAlbumImageDataFromURL(url: String) -> NSURLSessionDownloadTask {
+  func downloadPhotoAlbumImageDataFromURL(url: String, completionHandler: (data: NSData) -> Void) -> NSURLSessionDownloadTask {
     print("downloadPhotoAlbumImageDataFromURLs")
     let downloadTask = FlickrClient.downloadImageAtURL(url) { imageData in
-      if let dataToWrite = imageData {
+      completionHandler(data: imageData!)
         dispatch_async(dispatch_get_main_queue()) {
-          self.savePhotoToFileSystemAsData(dataToWrite, forFileName: self.imageURL(url))
-          self.delegate?.imageManagerDidFinishDownloadingImage()
+          self.savePhotoToFileSystemAsData(imageData!, forFileName: self.imageURL(url))
+          // self.delegate?.imageManagerDidFinishDownloadingImage()
         }
-      }
     }
     return downloadTask
   }
@@ -126,28 +124,27 @@ class ImageManager
   func savePhotoToFileSystemAsData(data: NSData, forFileName url: String) {
     print("savePhotoToFileSystemAsData")
     data.writeToFile(url, atomically: true)
-    addFilePathToDataSource(url)
+    // addFilePathToDataSource(url)
     downloadedImageCount++
   }
   
   /// add file paths to the data source for use by the PhotoAlbumViewController
   ///  - parameter filePath:  local URL where image data is stored
   /// - parameter imageData: Image object stored as NSData
-  func addFilePathToDataSource(filePath: String) {
-    let imageDataSource = ImageDataSource(imageFilePath: filePath)
-    dataSource.append(imageDataSource)
-    print("\(dataSource.count)")
-  }
+//  func addFilePathToDataSource(filePath: String) {
+//    let imageDataSource = ImageDataSource(imageFilePath: filePath)
+//    dataSource.append(imageDataSource)
+//    print("\(dataSource.count)")
+//  }
   
   /// delete files from the file system
   func deletePhotosForURLs(urls: [Photo]) {
     for url in urls {
-      if let filePath = url.photo {
-        do {
-          try fileManager.removeItemAtPath(filePath)
-        } catch let error as NSError {
-          print(error.localizedDescription)
-        }
+      do {
+        let filePath = imageURL(url.photo!)
+        try fileManager.removeItemAtPath(filePath)
+      } catch let error as NSError {
+        print(error.localizedDescription)
       }
     }
   }
