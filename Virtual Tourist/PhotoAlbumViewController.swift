@@ -232,7 +232,6 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
     for photo in fetchedResultsController.fetchedObjects as! [Photo] {
       sharedContext.deleteObject(photo)
     }
-    CoreDataStackManager.sharedInstance.saveContext()
   }
   
   func deleteSelectedPhotoPathsFromCoreDataStore() {
