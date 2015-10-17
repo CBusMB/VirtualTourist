@@ -11,7 +11,6 @@ import CoreData
 
 protocol ImageManagerDelegate: class
 {
-  // func imageManagerDidFinishDownloadingImage()
   func locationHasImages(flag: Bool)
 }
 
@@ -24,15 +23,6 @@ class ImageManager
   var fileManager: NSFileManager {
     return NSFileManager.defaultManager()
   }
-
-  var pin: Pin?
-  
-  var downloadedImageCount = 0
-  
-  /// This property serves as the data source for the PhotoAlbumViewController.photoAlbumCollectionView
-  var dataSource = [ImageDataSource]()
-  
-  var downloadTasks = [NSURLSessionDownloadTask]()
   
   weak var delegate: ImageManagerDelegate?
   
@@ -74,32 +64,17 @@ class ImageManager
     }
     dispatch_async(dispatch_get_main_queue()) {
       CoreDataStackManager.sharedInstance.saveContext()
-      print("saved in savePhotoURLsToCoreData")
     }
   }
   
   func downloadPhotoAlbumImageDataFromURL(url: String, completionHandler: (data: NSData) -> Void) -> NSURLSessionDownloadTask {
-    print("downloadPhotoAlbumImageDataFromURLs")
     let downloadTask = FlickrClient.downloadImageAtURL(url) { imageData in
       completionHandler(data: imageData!)
         dispatch_async(dispatch_get_main_queue()) {
           self.savePhotoToFileSystemAsData(imageData!, forFileName: self.imageURL(url))
-          // self.delegate?.imageManagerDidFinishDownloadingImage()
         }
     }
     return downloadTask
-  }
-  
-  func cancelDownloadTasks() {
-    for downloadTask in downloadTasks {
-      downloadTask.cancel()
-    }
-  }
-  
-  func resetDataSourceDownloadTasksAndCounter() {
-    dataSource.removeAll()
-    downloadTasks.removeAll()
-    downloadedImageCount = 0
   }
   
   /// - parameter urls: an array of URLs as strings
@@ -122,20 +97,8 @@ class ImageManager
   /// - parameter data: Data to be written to file system
   /// - parameter url: File name for file to be written
   func savePhotoToFileSystemAsData(data: NSData, forFileName url: String) {
-    print("savePhotoToFileSystemAsData")
     data.writeToFile(url, atomically: true)
-    // addFilePathToDataSource(url)
-    downloadedImageCount++
   }
-  
-  /// add file paths to the data source for use by the PhotoAlbumViewController
-  ///  - parameter filePath:  local URL where image data is stored
-  /// - parameter imageData: Image object stored as NSData
-//  func addFilePathToDataSource(filePath: String) {
-//    let imageDataSource = ImageDataSource(imageFilePath: filePath)
-//    dataSource.append(imageDataSource)
-//    print("\(dataSource.count)")
-//  }
   
   /// delete files from the file system
   func deletePhotosForURLs(urls: [Photo]) {

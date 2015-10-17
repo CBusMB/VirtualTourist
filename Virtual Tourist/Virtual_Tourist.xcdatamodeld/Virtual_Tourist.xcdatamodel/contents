@@ -3,7 +3,7 @@
     <entity name="Photo" representedClassName="Photo" syncable="YES">
         <attribute name="numberOfPhotosInAlbum" attributeType="Integer 64" defaultValueString="0" syncable="YES"/>
         <attribute name="photo" optional="YES" attributeType="String" valueTransformerName="ImageTransformer" allowsExternalBinaryDataStorage="YES" syncable="YES"/>
-        <relationship name="location" maxCount="1" deletionRule="No Action" destinationEntity="Pin" inverseName="photoAlbum" inverseEntity="Pin" syncable="YES"/>
+        <relationship name="location" maxCount="1" deletionRule="Nullify" destinationEntity="Pin" inverseName="photoAlbum" inverseEntity="Pin" syncable="YES"/>
     </entity>
     <entity name="Pin" representedClassName="Pin" syncable="YES">
         <attribute name="latitude" attributeType="Double" defaultValueString="0.0" syncable="YES"/>

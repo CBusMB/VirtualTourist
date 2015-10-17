@@ -13,7 +13,7 @@ class PhotoAlbumCollectionViewCell: UICollectionViewCell
   override init(frame: CGRect) {
     super.init(frame: frame)
     imageView = UIImageView(frame: contentView.bounds)
-    imageView.contentMode = .ScaleAspectFit
+    imageView.contentMode = .ScaleToFill
     contentView.addSubview(imageView)
   }
 

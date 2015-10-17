@@ -40,8 +40,6 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
   
   var instructionView: UIView?
   
-  var currentOrientation: UIDeviceOrientation?
-  
   var droppedPin: MKPointAnnotation?
   
   var imageManager: ImageManager!
@@ -89,12 +87,8 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
   override func setEditing(editing: Bool, animated: Bool) {
     super.setEditing(editing, animated: animated)
     if editing {
-      handleRotationWhileEditing()
       let rectForInstructionView = viewToAnimateRect(viewHeightForOffset: 0.0)
       instructionView = DeleteInstructionsView(frame: rectForInstructionView)
-    } else {
-      // When not in editing mode, remove myself as an observer of UIDeviceOrientationDidChangeNotification
-      NSNotificationCenter.defaultCenter().removeObserver(self, name: UIDeviceOrientationDidChangeNotification, object: nil)
     }
     animateView(view: instructionView!, forEditingState: editing)
   }
@@ -123,29 +117,6 @@ class TravelLocationsMapViewController: UIViewController, MKMapViewDelegate, NSF
                   y: view.frame.height - height,
               width: view.frame.width,
               height: view.frame.height / 8)
-  }
-  
-  /// Set up a notification for when the orientation of the device changes
-  func handleRotationWhileEditing() {
-    let currentDevice = UIDevice.currentDevice()
-    currentDevice.beginGeneratingDeviceOrientationNotifications()
-    NSNotificationCenter.defaultCenter().addObserver(self, selector: "deviceOrientationDidChange:",
-                                                               name: UIDeviceOrientationDidChangeNotification,
-                                                             object: nil)
-  }
-  
-  /// If the device is turned to landscape or portrait oreination, remove the previous instruction view and slide in a new one
-  func deviceOrientationDidChange(notification: NSNotification) {
-    let orientation = UIDevice.currentDevice().orientation
-    if orientation == UIDeviceOrientation.FaceUp || orientation == UIDeviceOrientation.FaceDown || orientation == UIDeviceOrientation.Unknown ||
-      currentOrientation == orientation {
-        return
-    }
-    currentOrientation = orientation
-    instructionView!.removeFromSuperview()
-    let rectForInstructionView = viewToAnimateRect(viewHeightForOffset: 0.0)
-    instructionView = DeleteInstructionsView(frame: rectForInstructionView)
-    animateView(view: instructionView!, forEditingState: true)
   }
   
   // MARK: - MKMapViewDelegate and related

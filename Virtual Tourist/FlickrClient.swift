@@ -32,7 +32,12 @@ class FlickrClient
             let results = parsedJson["photos"] as! NSDictionary
             if results["total"] as! String != "0" {
               let photoURLs = results["photo"] as! [NSDictionary]
-              let urls = photoURLs.map { $0["url_m"] as! String }
+              var urls = [String]()
+              for photoURL in photoURLs {
+                if photoURL["url_m"] != nil {
+                  urls.append(photoURL["url_m"] as! String)
+                }
+              }
               completionHandler(success: true, message: nil, flickrPhotoURLs: urls)
             } else {
               completionHandler(success: false, message: Flickr.NoPhotosForLocation, flickrPhotoURLs: nil)
@@ -52,9 +57,6 @@ class FlickrClient
       if let temporaryLocation = location {
         if let downloadedImageData = NSData(contentsOfURL: temporaryLocation) {
           downloadComplete(imageData: downloadedImageData)
-        } else {
-          // TODO: - handle error
-          print("error in downloadTaskWithURL completion handler")
         }
       }
     }
