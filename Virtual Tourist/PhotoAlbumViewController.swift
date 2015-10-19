@@ -74,7 +74,6 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
   
   override func viewWillDisappear(animated: Bool) {
     super.viewWillDisappear(animated)
-    // imageManager?.cancelDownloadTasks()
   }
   
   func presentNoImagesAlert() {
@@ -85,7 +84,6 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
   }
   
   //MARK: - ImageManagerDelegate
-  
   func locationHasImages(flag: Bool) {
     imageIndicator = flag
   }
@@ -194,8 +192,8 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
       deleteAllPhotoPathsFromCoreDataStore()
       imageManager?.fetchPhotoDataForLocation(pin!)
     } else {
-      deleteSelectedPhotoPathsFromCoreDataStore()
       deletePhotosForSelectedIndexPaths()
+      deleteSelectedPhotoPathsFromCoreDataStore()
     }
     toggleRefreshButtonTitle()
   }
@@ -230,7 +228,6 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
     for indexPath in selectedIndexes {
       photosToDelete.append(fetchedResultsController.objectAtIndexPath(indexPath) as! Photo)
     }
-    print("photos to delete count: \(photosToDelete.count)")
     for photo in photosToDelete {
       sharedContext.deleteObject(photo)
     }
