@@ -191,7 +191,7 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDataSource, UI
       imageManager?.deletePhotosForURLs((pin?.photoAlbum)!)
       deleteAllPhotoPathsFromCoreDataStore()
       imageManager?.fetchPhotoDataForLocation(pin!)
-    } else {
+    } else { // CHANGED ORDER OF METHOD CALLS HERE
       deletePhotosForSelectedIndexPaths()
       deleteSelectedPhotoPathsFromCoreDataStore()
     }
